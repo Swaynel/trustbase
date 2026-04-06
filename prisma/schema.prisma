@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Supabase Auth remains the source of truth for authentication.
+/// Prisma maps the public application tables on the same Supabase Postgres database.
+
+model Member {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id                 String?   @unique @db.Uuid
+  phone_hash              String    @unique
+  identity_level          Int       @default(0)
+  role                    String    @default("member")
+  display_name            String?
+  language                String    @default("en")
+  origin_country          String?
+  origin_region           String?
+  paystack_customer_id    String?
+  paystack_recipient_code String?
+  cloudinary_profile_id   String?
+  credit_narrative        String?
+  credit_narrative_at     DateTime? @db.Timestamptz(6)
+  internal_balance        Decimal   @default(0) @db.Decimal(14, 2)
+  reputation_score        Decimal   @default(50) @db.Decimal(5, 2)
+  is_active               Boolean   @default(true)
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("members")
+}
+
+model IdentityPillar {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id       String   @db.Uuid
+  pillar_1_score  Decimal? @default(0) @db.Decimal(5, 2)
+  pillar_2_score  Decimal? @default(0) @db.Decimal(5, 2)
+  pillar_3_score  Decimal? @default(0) @db.Decimal(5, 2)
+  pillar_1_done   Boolean  @default(false)
+  pillar_2_done   Boolean  @default(false)
+  pillar_3_done   Boolean  @default(false)
+  p2_days_present Int?     @default(0)
+  p3_threads      Int?     @default(0)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("identity_pillars")
+}
+
+model IdentityEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id  String   @db.Uuid
+  old_level  Int?
+  new_level  Int?
+  reason     String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("identity_events")
+}
+
+model IdentityFlag {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id   String   @db.Uuid
+  flag_type   String
+  confidence  Decimal? @db.Decimal(4, 3)
+  reasoning   String?
+  reviewed    Boolean  @default(false)
+  reviewed_by String?  @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("identity_flags")
+}
+
+model OriginCorroboration {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject_id      String   @db.Uuid
+  corroborator_id String   @db.Uuid
+  origin_country  String
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([subject_id, corroborator_id])
+  @@map("origin_corroborations")
+}
+
+model Chama {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  description         String?
+  status              String    @default("forming")
+  contribution_amount Decimal   @db.Decimal(14, 2)
+  cycle_days          Int       @default(30)
+  balance             Decimal   @default(0) @db.Decimal(14, 2)
+  created_by          String    @db.Uuid
+  current_cycle_end   DateTime? @db.Date
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("chamas")
+}
+
+model ChamaMember {
+  chama_id           String   @db.Uuid
+  member_id          String   @db.Uuid
+  joined_at          DateTime @default(now()) @db.Timestamptz(6)
+  total_contributed  Decimal  @default(0) @db.Decimal(14, 2)
+  payout_received    Boolean  @default(false)
+
+  @@id([chama_id, member_id])
+  @@map("chama_members")
+}
+
+model ChamaEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chama_id   String   @db.Uuid
+  event_type String
+  metadata   Json?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("chama_events")
+}
+
+model Contribution {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chama_id           String   @db.Uuid
+  member_id          String   @db.Uuid
+  amount             Decimal  @db.Decimal(14, 2)
+  paystack_reference String?  @unique
+  status             String   @default("pending")
+  operator_id        String?  @db.Uuid
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("contributions")
+}
+
+model Loan {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chama_id           String?   @db.Uuid
+  borrower_id        String    @db.Uuid
+  amount             Decimal   @db.Decimal(14, 2)
+  purpose            String?
+  status             String    @default("requested")
+  paystack_reference String?
+  disbursed_at       DateTime? @db.Timestamptz(6)
+  due_at             DateTime? @db.Timestamptz(6)
+  repaid_at          DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("loans")
+}
+
+model Guarantee {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loan_id      String    @db.Uuid
+  guarantor_id String    @db.Uuid
+  stake_score  Decimal   @default(10) @db.Decimal(5, 2)
+  accepted     Boolean?
+  outcome      String?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("guarantees")
+}
+
+model Transaction {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id          String   @db.Uuid
+  type               String
+  amount             Decimal  @db.Decimal(14, 2)
+  direction          String
+  paystack_reference String?
+  counterpart_id     String?  @db.Uuid
+  operator_id        String?  @db.Uuid
+  metadata           Json?
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("transactions")
+}
+
+model Listing {
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id           String                     @db.Uuid
+  title               String
+  description         String
+  category            String?
+  price               Decimal                    @db.Decimal(14, 2)
+  cloudinary_public_id String?
+  status              String                     @default("pending")
+  quality_score       Decimal?                   @db.Decimal(3, 1)
+  listing_embedding   Unsupported("vector(1024)")?
+  created_at          DateTime                   @default(now()) @db.Timestamptz(6)
+
+  @@map("listings")
+}
+
+model Order {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id         String   @db.Uuid
+  buyer_id           String   @db.Uuid
+  seller_id          String   @db.Uuid
+  amount             Decimal  @db.Decimal(14, 2)
+  status             String   @default("pending")
+  paystack_reference String?  @unique
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("orders")
+}
+
+model Dispute {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id               String   @db.Uuid
+  raised_by              String   @db.Uuid
+  description            String?
+  cohere_summary         String?
+  recommended_resolution String?
+  cohere_confidence      Decimal? @db.Decimal(4, 3)
+  resolved_by            String?  @db.Uuid
+  outcome                String?
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("disputes")
+}
+
+model Vote {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proposal         String
+  proposer_id      String   @db.Uuid
+  status           String   @default("open")
+  window_closes_at DateTime @db.Timestamptz(6)
+  yes_weight       Decimal  @default(0) @db.Decimal(10, 2)
+  no_weight        Decimal  @default(0) @db.Decimal(10, 2)
+  result           String?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("votes")
+}
+
+model VoteResponse {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vote_id    String   @db.Uuid
+  member_id  String   @db.Uuid
+  choice     String
+  weight     Decimal  @default(1) @db.Decimal(5, 2)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([vote_id, member_id])
+  @@map("vote_responses")
+}
+
+model GovernanceRule {
+  key        String   @id
+  value      String
+  updated_by String?  @db.Uuid
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("governance_rules")
+}
+
+model TransferRequest {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sender_id        String   @db.Uuid
+  amount           Decimal  @db.Decimal(14, 2)
+  destination_city String
+  agent_id         String?  @db.Uuid
+  status           String   @default("open")
+  expires_at       DateTime @default(dbgenerated("(now() + '24:00:00'::interval)")) @db.Timestamptz(6)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("transfer_requests")
+}
+
+model UssdSession {
+  session_id   String   @id
+  member_id    String?  @db.Uuid
+  phone_hash   String?
+  current_menu String   @default("main")
+  pending_data Json?
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("ussd_sessions")
+}

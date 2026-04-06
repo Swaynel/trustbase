@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+:root {
+  --font-display: 'Playfair Display';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+
+  --color-primary: #c07030;
+  --color-primary-dark: #a85a22;
+  --color-surface: #fdf8f0;
+  --color-surface-raised: #fff;
+  --color-border: #edd0a8;
+  --color-text: #1a1208;
+  --color-text-muted: #6e3418;
+  --color-accent: #3a7a4a;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-body), sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #edd0a8; border-radius: 3px; }
+
+/* ── LEVEL STRIP / DOT COLORS ── */
+.level-0 { background: #9ca3af; }
+.level-1 { background: #f59e0b; }
+.level-2 { background: #f97316; }
+.level-3 { background: #3a7a4a; }
+.level-4 { background: #c07030; }
+
+/* ── STAGGERED FADE IN ── */
+.fade-in   { animation: fadeUp 0.35s ease both; }
+.fade-in-1 { animation: fadeUp 0.35s 0.05s ease both; }
+.fade-in-2 { animation: fadeUp 0.35s 0.10s ease both; }
+.fade-in-3 { animation: fadeUp 0.35s 0.15s ease both; }
+.fade-in-4 { animation: fadeUp 0.35s 0.20s ease both; }
+.fade-in-5 { animation: fadeUp 0.35s 0.25s ease both; }
+
+/* ── SECTION HELPERS ── */
+.section-title { font-family: var(--font-display); font-size: 1.5rem; color: #1a1208; margin-bottom: 0.25rem; }
+.section-sub   { font-size: 0.875rem; color: #a85a22; margin-bottom: 1.5rem; }
+.badge         { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* (see fade-in-N classes above) */
+
+.skeleton {
+  background: linear-gradient(90deg, #f0e6d3 25%, #fdf8f0 50%, #f0e6d3 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ── CARD ── */
+.card {
+  @apply bg-white rounded-2xl border border-earth-200 shadow-sm;
+}
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+}
+
+/* ── BUTTON ── */
+.btn-primary {
+  @apply bg-earth-600 text-white font-medium rounded-xl px-5 py-2.5 
+         hover:bg-earth-700 active:scale-95 transition-all duration-150 
+         disabled:opacity-40 disabled:cursor-not-allowed;
+}
+.btn-secondary {
+  @apply bg-earth-100 text-earth-800 font-medium rounded-xl px-5 py-2.5 
+         hover:bg-earth-200 active:scale-95 transition-all duration-150;
+}
+.btn-ghost {
+  @apply text-earth-700 font-medium rounded-xl px-4 py-2 
+         hover:bg-earth-50 active:scale-95 transition-all duration-150;
+}
+
+/* ── INPUT ── */
+.input {
+  @apply w-full bg-sand-100 border border-earth-200 rounded-xl px-4 py-3
+         text-ink-900 placeholder-earth-300
+         focus:outline-none focus:border-earth-500 focus:bg-white
+         transition-colors duration-150;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  @apply h-2 rounded-full bg-earth-100 overflow-hidden;
+}
+.progress-fill {
+  @apply h-full rounded-full bg-earth-500 transition-all duration-700;
+}
