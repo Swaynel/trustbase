@@ -1,7 +1,8 @@
 // app/api/ussd/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createServiceClient } from '@/lib/supabase/server'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { sendSMS, ussdContinue, ussdEnd, USSD_MENUS } from '@/lib/africastalking'
 import { explainIdentity, onboardingGuide } from '@/lib/cohere'
 import crypto from 'crypto'
@@ -15,18 +16,8 @@ export async function POST(req: NextRequest) {
   const sessionId = formData.get('sessionId') as string
   const phoneNumber = formData.get('phoneNumber') as string
   const text = (formData.get('text') as string) || ''
-  const serviceCode = formData.get('serviceCode') as string
 
-  const supabase = createServiceClient()
   const phoneHash = hashPhone(phoneNumber)
-
-  // Load or create session
-  let session = await supabase
-    .from('ussd_sessions')
-    .select('*')
-    .eq('session_id', sessionId)
-    .single()
-    .then(r => r.data)
 
   const inputs = text ? text.split('*') : []
   const lastInput = inputs[inputs.length - 1] || ''
@@ -44,13 +35,22 @@ export async function POST(req: NextRequest) {
 
   // ── MAIN MENU ────────────────────────────────────────────────────────────
   if (!text || text === '') {
-    await supabase.from('ussd_sessions').upsert({
-      session_id: sessionId,
-      member_id: member?.id,
-      phone_hash: phoneHash,
-      current_menu: 'main',
-      pending_data: null,
-      updated_at: new Date().toISOString(),
+    await prisma.ussdSession.upsert({
+      where: { session_id: sessionId },
+      update: {
+        member_id: member?.id ?? null,
+        phone_hash: phoneHash,
+        current_menu: 'main',
+        pending_data: Prisma.JsonNull,
+        updated_at: new Date(),
+      },
+      create: {
+        session_id: sessionId,
+        member_id: member?.id ?? null,
+        phone_hash: phoneHash,
+        current_menu: 'main',
+        pending_data: Prisma.JsonNull,
+      },
     })
 
     if (!member) {
@@ -72,11 +72,11 @@ export async function POST(req: NextRequest) {
 
   // 1 → Identity
   if (root === '1') {
-    const { data: pillars } = await supabase
-      .from('identity_pillars')
-      .select('*')
-      .eq('member_id', member?.id)
-      .single()
+    const pillars = member
+      ? await prisma.identityPillar.findFirst({
+          where: { member_id: member.id },
+        })
+      : null
 
     if (!pillars || !rest.length) {
       return new NextResponse(
@@ -97,11 +97,11 @@ export async function POST(req: NextRequest) {
           language: member.language,
           level: member.identity_level,
           p1Done: pillars.pillar_1_done,
-          p1Score: pillars.pillar_1_score,
+          p1Score: decimalToNumber(pillars.pillar_1_score),
           p2Done: pillars.pillar_2_done,
-          p2Days: pillars.p2_days_present,
+          p2Days: pillars.p2_days_present ?? 0,
           p3Done: pillars.pillar_3_done,
-          p3Threads: pillars.p3_threads,
+          p3Threads: pillars.p3_threads ?? 0,
         })
         await sendSMS(phoneNumber, explanation.slice(0, 160))
         return new NextResponse(
@@ -119,35 +119,43 @@ export async function POST(req: NextRequest) {
 
   // 2 → Savings group balance
   if (root === '2' && member) {
-    const { data: chamas } = await supabase
-      .from('chama_members')
-      .select('chamas(id, name, balance, status)')
-      .eq('member_id', member.id)
-      .limit(3)
+    const memberships = await prisma.chamaMember.findMany({
+      where: { member_id: member.id },
+      take: 3,
+      select: { chama_id: true },
+    })
 
-    if (!chamas?.length) {
+    const chamas = memberships.length
+      ? await prisma.chama.findMany({
+          where: { id: { in: memberships.map((membership) => membership.chama_id) } },
+          select: { id: true, name: true, balance: true, status: true },
+        })
+      : []
+
+    if (!chamas.length) {
       return new NextResponse(
         ussdEnd('You have no savings groups. Join TrustBase app to create one.'),
         { headers: { 'Content-Type': 'text/plain' } }
       )
     }
 
-    const chama = chamas[0].chamas as any
+    const chama = chamas[0]
     return new NextResponse(
-      USSD_MENUS.savings(chama.balance, chama.name),
+      USSD_MENUS.savings(chama.balance.toNumber(), chama.name),
       { headers: { 'Content-Type': 'text/plain' } }
     )
   }
 
   // 5 → Governance vote
   if (root === '5' && member) {
-    const { data: openVotes } = await supabase
-      .from('votes')
-      .select('id, proposal')
-      .eq('status', 'open')
-      .gt('window_closes_at', new Date().toISOString())
-      .limit(1)
-      .single()
+    const openVotes = await prisma.vote.findFirst({
+      where: {
+        status: 'open',
+        window_closes_at: { gt: new Date() },
+      },
+      select: { id: true, proposal: true },
+      orderBy: { window_closes_at: 'asc' },
+    })
 
     if (!openVotes) {
       return new NextResponse(
@@ -160,16 +168,41 @@ export async function POST(req: NextRequest) {
       const choice = rest[0] === '1' ? 'yes' : 'no'
       const weight = member.identity_level === 4 ? 3 : member.identity_level
 
-      await supabase.from('vote_responses').upsert({
-        vote_id: openVotes.id,
-        member_id: member.id,
-        choice,
-        weight,
+      await prisma.voteResponse.upsert({
+        where: {
+          vote_id_member_id: {
+            vote_id: openVotes.id,
+            member_id: member.id,
+          },
+        },
+        update: { choice, weight },
+        create: {
+          vote_id: openVotes.id,
+          member_id: member.id,
+          choice,
+          weight,
+        },
       })
 
-      // Update tally
-      const col = choice === 'yes' ? 'yes_weight' : 'no_weight'
-      await supabase.rpc('increment_vote_weight', { vote_id: openVotes.id, col, amount: weight })
+      const allResponses = await prisma.voteResponse.findMany({
+        where: { vote_id: openVotes.id },
+        select: { choice: true, weight: true },
+      })
+
+      const yes = allResponses
+        .filter((response) => response.choice === 'yes')
+        .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+      const no = allResponses
+        .filter((response) => response.choice === 'no')
+        .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+
+      await prisma.vote.update({
+        where: { id: openVotes.id },
+        data: {
+          yes_weight: yes,
+          no_weight: no,
+        },
+      })
 
       return new NextResponse(
         ussdEnd(`Vote recorded: ${choice.toUpperCase()}. Thank you.`),
@@ -186,12 +219,19 @@ export async function POST(req: NextRequest) {
   // 0 → Help (triggers Cohere onboarding)
   if (root === '0' && member) {
     try {
-      const { data: activeChamas } = await supabase
-        .from('chama_members')
-        .select('chamas(name)')
-        .eq('member_id', member.id)
+      const activeMemberships = await prisma.chamaMember.findMany({
+        where: { member_id: member.id },
+        select: { chama_id: true },
+      })
 
-      const chamaNames = activeChamas?.map((c: any) => c.chamas?.name).filter(Boolean) || []
+      const activeChamas = activeMemberships.length
+        ? await prisma.chama.findMany({
+            where: { id: { in: activeMemberships.map((membership) => membership.chama_id) } },
+            select: { name: true },
+          })
+        : []
+
+      const chamaNames = activeChamas.map((chama) => chama.name).filter(Boolean)
       const guide = await onboardingGuide({
         question: 'What is TrustBase and how do I get started?',
         language: member.language,

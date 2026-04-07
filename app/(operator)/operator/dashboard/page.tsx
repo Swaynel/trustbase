@@ -1,22 +1,50 @@
 // app/(operator)/operator/dashboard/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Shield } from 'lucide-react'
 import OperatorActions from '@/components/operator/OperatorActions'
 
 export default async function OperatorDashboard() {
-  const { supabase, user, member: operator } = await getCurrentUserWithMember()
+  const { user, member: operator } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!operator || !['operator', 'admin'].includes(operator.role)) redirect('/dashboard')
 
-  // Recent transactions executed by this operator
-  const { data: recentOps } = await supabase
-    .from('transactions')
-    .select('id, type, amount, direction, created_at, members!member_id(display_name)')
-    .eq('operator_id', operator.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  const recentOpRows = await prisma.transaction.findMany({
+    where: { operator_id: operator.id },
+    orderBy: { created_at: 'desc' },
+    take: 10,
+    select: {
+      id: true,
+      member_id: true,
+      type: true,
+      amount: true,
+      direction: true,
+      created_at: true,
+    },
+  })
+
+  const memberIds = Array.from(new Set(recentOpRows.map((transaction) => transaction.member_id)))
+  const servedMembers = memberIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: memberIds } },
+        select: { id: true, display_name: true },
+      })
+    : []
+
+  const recentOps = recentOpRows.map((transaction) => ({
+    ...transaction,
+    amount: decimalToNumber(transaction.amount),
+    created_at: transaction.created_at.toISOString(),
+    members: servedMembers.find((member) => member.id === transaction.member_id)
+      ? {
+          display_name:
+            servedMembers.find((member) => member.id === transaction.member_id)?.display_name || 'Member',
+        }
+      : null,
+  }))
 
   return (
     <div className="min-h-screen bg-ink-900 text-white p-4">
@@ -40,14 +68,14 @@ export default async function OperatorDashboard() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="rounded-xl bg-earth-800 p-4">
           <p className="text-xs text-earth-400 mb-1">Transactions today</p>
-          <p className="font-display text-2xl text-white">{recentOps?.filter((t: any) => {
+          <p className="font-display text-2xl text-white">{recentOps.filter((t) => {
             const today = new Date(); const d = new Date(t.created_at)
             return d.toDateString() === today.toDateString()
           }).length || 0}</p>
         </div>
         <div className="rounded-xl bg-earth-800 p-4">
           <p className="text-xs text-earth-400 mb-1">Members served</p>
-          <p className="font-display text-2xl text-white">{recentOps?.length || 0}</p>
+          <p className="font-display text-2xl text-white">{recentOps.length || 0}</p>
         </div>
       </div>
 
@@ -55,11 +83,11 @@ export default async function OperatorDashboard() {
       <OperatorActions operatorId={operator.id} />
 
       {/* Recent ops */}
-      {recentOps && recentOps.length > 0 && (
+      {recentOps.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-medium text-earth-300 mb-3">Recent operations</h2>
           <div className="space-y-2">
-            {recentOps.map((t: any) => (
+            {recentOps.map((t) => (
               <div key={t.id} className="flex items-center gap-3 rounded-xl bg-earth-800 px-3 py-2.5">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.direction === 'in' ? 'bg-green-400' : 'bg-earth-400'}`} />
                 <div className="flex-1 min-w-0">

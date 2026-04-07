@@ -51,7 +51,7 @@ export async function getCurrentUserWithMember() {
   } = await supabase.auth.getUser()
 
   if (userError || !user) {
-    return { supabase, user: null, member: null, userError, memberError: null }
+    return { user: null, member: null, userError, memberError: null }
   }
 
   const member = await prisma.member.findUnique({
@@ -59,7 +59,6 @@ export async function getCurrentUserWithMember() {
   })
 
   return {
-    supabase,
     user,
     member: member ? serializeMember(member) : null,
     userError: null,

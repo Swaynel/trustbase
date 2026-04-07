@@ -13,6 +13,39 @@ const LANGUAGES = [
   { code: 'ar', label: 'العربية' },
 ]
 
+function normalizePhoneNumber(input: string) {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+
+  const compact = trimmed.replace(/[\s()-]/g, '')
+  const digits = compact.replace(/\D/g, '')
+
+  if (compact.startsWith('+')) return `+${compact.slice(1).replace(/\D/g, '')}`
+  if (digits.startsWith('00')) return `+${digits.slice(2)}`
+  if (digits.startsWith('254') && digits.length === 12) return `+${digits}`
+  if (digits.startsWith('0') && digits.length === 10) return `+254${digits.slice(1)}`
+  if (digits.startsWith('7') && digits.length === 9) return `+254${digits}`
+  if (digits.length >= 8) return `+${digits}`
+
+  return digits
+}
+
+function isValidE164Phone(phone: string) {
+  return /^\+[1-9]\d{7,14}$/.test(phone)
+}
+
+async function parseJsonResponse(res: Response) {
+  const text = await res.text()
+
+  if (!text) return {}
+
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    throw new Error(`Server returned an unexpected ${res.headers.get('content-type') || 'response'} (${res.status}). Check the dev server log for the route error.`)
+  }
+}
+
 export default function LoginPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -32,24 +65,21 @@ export default function LoginPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user || cancelled) return
 
-      const { data: member, error: memberError } = await supabase
-        .from('members')
-        .select('id')
-        .eq('auth_id', user.id)
-        .maybeSingle()
-
       if (cancelled) return
-      if (memberError) {
-        setError(memberError.message)
+      const res = await fetch('/api/auth/member-status', { cache: 'no-store' })
+      const payload = await parseJsonResponse(res)
+
+      if (!res.ok) {
+        setError(String(payload.error || 'Could not load your profile state'))
         return
       }
 
-      if (member) {
+      if (payload.hasMemberProfile) {
         router.replace('/dashboard')
         return
       }
 
-      setPhone(user.phone ?? '')
+      setPhone(normalizePhoneNumber(user.phone ?? ''))
       setStep('profile')
     }
 
@@ -63,8 +93,14 @@ export default function LoginPage() {
   async function handleSendOTP() {
     setLoading(true); setError('')
     try {
-      const { error } = await supabase.auth.signInWithOtp({ phone })
+      const normalizedPhone = normalizePhoneNumber(phone)
+      if (!isValidE164Phone(normalizedPhone)) {
+        throw new Error('Enter a valid phone number, for example +254711929567.')
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({ phone: normalizedPhone })
       if (error) throw error
+      setPhone(normalizedPhone)
       setStep('otp')
     } catch (e: any) {
       setError(e.message)
@@ -76,19 +112,26 @@ export default function LoginPage() {
   async function handleVerifyOTP() {
     setLoading(true); setError('')
     try {
-      const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' })
+      const normalizedPhone = normalizePhoneNumber(phone)
+      if (!isValidE164Phone(normalizedPhone)) {
+        throw new Error('Enter a valid phone number before verifying.')
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: normalizedPhone,
+        token: otp.trim(),
+        type: 'sms',
+      })
       if (error) throw error
+      setPhone(normalizedPhone)
 
-      // Check if member profile exists
-      const { data: member, error: memberError } = await supabase
-        .from('members')
-        .select('id')
-        .eq('auth_id', data.user!.id)
-        .maybeSingle()
+      const statusRes = await fetch('/api/auth/member-status', { cache: 'no-store' })
+      const statusPayload = await parseJsonResponse(statusRes)
+      if (!statusRes.ok) {
+        throw new Error(String(statusPayload.error || 'Could not load your profile state'))
+      }
 
-      if (memberError) throw memberError
-
-      if (!member) {
+      if (!statusPayload.hasMemberProfile) {
         setStep('profile')
       } else {
         router.push('/dashboard')
@@ -103,22 +146,30 @@ export default function LoginPage() {
   async function handleCreateProfile() {
     setLoading(true); setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const user = session?.user ?? null
       if (!user) throw new Error('Not authenticated')
+
+      const headers = new Headers({ 'Content-Type': 'application/json' })
+      if (session?.access_token) {
+        headers.set('Authorization', `Bearer ${session.access_token}`)
+      }
 
       const res = await fetch('/api/auth/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          phone,
+          phone: normalizePhoneNumber(phone),
           name,
           language: lang,
           country,
         }),
       })
 
-      const payload = await res.json()
-      if (!res.ok) throw new Error(payload.error || 'Could not create profile')
+      const payload = await parseJsonResponse(res)
+      if (!res.ok) throw new Error(String(payload.error || 'Could not create profile'))
 
       router.push('/dashboard')
     } catch (e: any) {

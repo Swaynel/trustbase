@@ -1,4 +1,6 @@
 // app/(app)/profile/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber, dateToISOString } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { UserCircle, Download, Star, Shield, Calendar, Hash } from 'lucide-react'
@@ -9,47 +11,49 @@ const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Com
 const LANG_NAMES: Record<string, string> = { en: 'English', sw: 'Swahili', fr: 'Français', ar: 'العربية' }
 
 export default async function ProfilePage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const { data: pillars } = await supabase
-    .from('identity_pillars')
-    .select('*')
-    .eq('member_id', member.id)
-    .single()
+  const [pillars, txCount, chamaCount, loanStats, contribs] = await Promise.all([
+    prisma.identityPillar.findFirst({
+      where: { member_id: member.id },
+    }),
+    prisma.transaction.count({
+      where: { member_id: member.id },
+    }),
+    prisma.chamaMember.count({
+      where: { member_id: member.id },
+    }),
+    prisma.loan.findMany({
+      where: { borrower_id: member.id },
+      select: { status: true },
+    }),
+    prisma.contribution.findMany({
+      where: { member_id: member.id },
+      select: { status: true },
+    }),
+  ])
 
-  // Stats
-  const { count: txCount } = await supabase
-    .from('transactions')
-    .select('*', { count: 'exact', head: true })
-    .eq('member_id', member.id)
-
-  const { data: chamaCount } = await supabase
-    .from('chama_members')
-    .select('chama_id')
-    .eq('member_id', member.id)
-
-  const { data: loanStats } = await supabase
-    .from('loans')
-    .select('status')
-    .eq('borrower_id', member.id)
-
-  const repaidLoans = loanStats?.filter((l: any) => l.status === 'repaid').length || 0
-  const totalLoans = loanStats?.length || 0
+  const repaidLoans = loanStats.filter((loan) => loan.status === 'repaid').length
+  const totalLoans = loanStats.length
   const repayRate = totalLoans > 0 ? Math.round((repaidLoans / totalLoans) * 100) : 100
   const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86400000)
 
-  // Savings consistency (based on contributions)
-  const { data: contribs } = await supabase
-    .from('contributions')
-    .select('status')
-    .eq('member_id', member.id)
-
-  const successContribs = contribs?.filter((c: any) => c.status === 'success').length || 0
-  const totalContribs = contribs?.length || 0
+  const successContribs = contribs.filter((contribution) => contribution.status === 'success').length
+  const totalContribs = contribs.length
   const savingsConsistency = totalContribs > 0 ? Math.round((successContribs / totalContribs) * 100) : 0
+  const serializedPillars = pillars
+    ? {
+        ...pillars,
+        pillar_1_score: decimalToNumber(pillars.pillar_1_score),
+        pillar_2_score: decimalToNumber(pillars.pillar_2_score),
+        pillar_3_score: decimalToNumber(pillars.pillar_3_score),
+        p2_days_present: pillars.p2_days_present ?? 0,
+        p3_threads: pillars.p3_threads ?? 0,
+      }
+    : null
 
   const narrativeProps = {
     memberId: member.id,
@@ -61,7 +65,7 @@ export default async function ProfilePage() {
     transactionCount: txCount || 0,
     language: member.language,
     existingNarrative: member.credit_narrative,
-    generatedAt: member.credit_narrative_at,
+    generatedAt: dateToISOString(member.credit_narrative_at),
   }
 
   return (
@@ -103,30 +107,30 @@ export default async function ProfilePage() {
           <PillarRow
             name="Origin Web"
             desc="Community corroboration of your declared origin"
-            done={pillars?.pillar_1_done}
-            detail={pillars?.pillar_1_done ? 'Complete' : `${Math.round(pillars?.pillar_1_score || 0)}% — need 3 corroborations`}
+            done={serializedPillars?.pillar_1_done}
+            detail={serializedPillars?.pillar_1_done ? 'Complete' : `${Math.round(serializedPillars?.pillar_1_score || 0)}% — need 3 corroborations`}
           />
           <PillarRow
             name="Presence Pulse"
             desc="30 days of consistent phone and financial activity"
-            done={pillars?.pillar_2_done}
-            detail={pillars?.pillar_2_done ? 'Complete' : `${pillars?.p2_days_present || 0}/30 days`}
+            done={serializedPillars?.pillar_2_done}
+            detail={serializedPillars?.pillar_2_done ? 'Complete' : `${serializedPillars?.p2_days_present || 0}/30 days`}
           />
           <PillarRow
             name="Activity Threads"
             desc="5 distinct financial transactions with different members"
-            done={pillars?.pillar_3_done}
-            detail={pillars?.pillar_3_done ? 'Complete' : `${pillars?.p3_threads || 0}/5 partners`}
+            done={serializedPillars?.pillar_3_done}
+            detail={serializedPillars?.pillar_3_done ? 'Complete' : `${serializedPillars?.p3_threads || 0}/5 partners`}
           />
         </div>
       </div>
 
       {/* Origin corroboration (if Pillar 1 incomplete) */}
-      {!pillars?.pillar_1_done && member.origin_country && (
+      {!serializedPillars?.pillar_1_done && member.origin_country && (
         <OriginCorroborate
           memberId={member.id}
           originCountry={member.origin_country}
-          currentScore={pillars?.pillar_1_score || 0}
+          currentScore={serializedPillars?.pillar_1_score || 0}
         />
       )}
 
@@ -134,7 +138,7 @@ export default async function ProfilePage() {
       <div className="card">
         <h2 className="font-display text-lg text-ink-900 mb-4">Financial record</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatBlock label="Savings groups" value={String(chamaCount?.length || 0)} />
+          <StatBlock label="Savings groups" value={String(chamaCount || 0)} />
           <StatBlock label="Loans" value={String(totalLoans)} />
           <StatBlock label="Repayment rate" value={`${repayRate}%`} />
           <StatBlock label="Savings consistency" value={totalContribs > 0 ? `${savingsConsistency}%` : 'N/A'} />
@@ -147,7 +151,7 @@ export default async function ProfilePage() {
       {/* Settings */}
       <div className="card">
         <h2 className="font-display text-lg text-ink-900 mb-4">Settings</h2>
-        <LanguageSetting currentLanguage={member.language} memberId={member.id} authId={user.id} />
+        <LanguageSetting currentLanguage={member.language} />
       </div>
     </div>
   )

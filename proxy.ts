@@ -4,7 +4,6 @@ import { updateSession } from '@/lib/supabase/middleware'
 
 const PROTECTED_PATHS = ['/dashboard', '/chama', '/marketplace', '/loans', '/governance', '/profile']
 const OPERATOR_PATHS = ['/operator']
-const AUTH_PATHS = ['/login']
 
 // Simple in-memory rate limiter (upgrade to Upstash Redis for production)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -26,12 +25,16 @@ function checkRateLimit(userId: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { response, user } = await updateSession(request)
-  const memberId = response.headers.get('x-user-id')
+  const isApiRoute = pathname.startsWith('/api')
+  const isPublicApiRoute =
+    pathname.startsWith('/api/auth/member-status') ||
+    pathname.startsWith('/api/auth/profile') ||
+    pathname.startsWith('/api/ussd') ||
+    pathname.startsWith('/api/paystack/webhook')
 
   // API routes: enforce rate limit on authenticated users
-  if (pathname.startsWith('/api') && user) {
-    const userId = memberId || user.id
-    if (!checkRateLimit(userId)) {
+  if (isApiRoute && user) {
+    if (!checkRateLimit(user.id)) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
   }
@@ -40,25 +43,14 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     const isProtected =
       PROTECTED_PATHS.some(p => pathname.startsWith(p)) ||
-      OPERATOR_PATHS.some(p => pathname.startsWith(p)) ||
-      (pathname.startsWith('/api') &&
-        !pathname.startsWith('/api/ussd') &&
-        !pathname.startsWith('/api/paystack/webhook'))
+      OPERATOR_PATHS.some(p => pathname.startsWith(p))
+
+    if (isApiRoute && !isPublicApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     if (isProtected) {
       return NextResponse.redirect(new URL('/login', request.url))
-    }
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (user && memberId && AUTH_PATHS.some(p => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Operator route guard
-  if (OPERATOR_PATHS.some(p => pathname.startsWith(p))) {
-    const role = response.headers.get('x-user-role')
-    if (role !== 'operator' && role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 

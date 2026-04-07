@@ -1,7 +1,9 @@
 // app/api/marketplace/listings/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, getCurrentUserWithMember } from '@/lib/supabase/server'
 import { classifyListing, embed } from '@/lib/cohere'
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
+import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
 const PROHIBITED_KEYWORDS = ['weapon', 'drug', 'alcohol', 'counterfeit', 'stolen', 'fake id', 'illegal']
 
@@ -19,8 +21,6 @@ export async function POST(req: NextRequest) {
   if (!member || member.identity_level < 2) {
     return NextResponse.json({ error: 'Level 2 required to sell on marketplace' }, { status: 403 })
   }
-
-  const supabase = await createClient()
 
   // Quick keyword check for prohibited content
   const combinedText = `${title} ${description}`.toLowerCase()
@@ -49,52 +49,106 @@ export async function POST(req: NextRequest) {
     console.error('Cohere embed failed:', e)
   }
 
-  const { data: listing, error } = await supabase
-    .from('listings')
-    .insert({
-      seller_id: member.id,
-      title,
-      description,
-      category,
-      price,
-      cloudinary_public_id: cloudinaryPublicId || null,
-      status,
-      quality_score: qualityScore,
-      listing_embedding: embedding ? `[${embedding.join(',')}]` : null,
+  try {
+    const listing = await prisma.listing.create({
+      data: {
+        seller_id: member.id,
+        title,
+        description,
+        category,
+        price,
+        cloudinary_public_id: cloudinaryPublicId || null,
+        status,
+        quality_score: qualityScore,
+      },
+      select: {
+        id: true,
+        seller_id: true,
+        title: true,
+        description: true,
+        category: true,
+        price: true,
+        cloudinary_public_id: true,
+        status: true,
+        quality_score: true,
+        created_at: true,
+      },
     })
-    .select()
-    .single()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (embedding?.length) {
+      const vector = `[${embedding.join(',')}]`
+      await prisma.$executeRaw`
+        UPDATE public.listings
+        SET listing_embedding = ${vector}::vector
+        WHERE id = ${listing.id}::uuid
+      `
+    }
+
+    return NextResponse.json({
+      listing: {
+        ...listing,
+        price: decimalToNumber(listing.price),
+        quality_score: listing.quality_score == null ? null : decimalToNumber(listing.quality_score),
+        created_at: listing.created_at.toISOString(),
+      },
+      message: status === 'pending'
+        ? 'Listing submitted for review. It will go live once approved.'
+        : 'Listing is now live on the marketplace.',
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not create listing'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  return NextResponse.json({
-    listing,
-    message: status === 'pending'
-      ? 'Listing submitted for review. It will go live once approved.'
-      : 'Listing is now live on the marketplace.',
-  })
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
   const { searchParams } = new URL(req.url)
   const category = searchParams.get('category')
   const sellerId = searchParams.get('sellerId')
 
-  let query = supabase
-    .from('listings')
-    .select('id, title, description, category, price, cloudinary_public_id, status, quality_score, created_at, seller_id, members!seller_id(display_name, identity_level)')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const listings = await prisma.listing.findMany({
+    where: {
+      status: 'active',
+      ...(category ? { category } : {}),
+      ...(sellerId ? { seller_id: sellerId } : {}),
+    },
+    orderBy: { created_at: 'desc' },
+    take: 50,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      category: true,
+      price: true,
+      cloudinary_public_id: true,
+      status: true,
+      quality_score: true,
+      created_at: true,
+      seller_id: true,
+    },
+  })
 
-  if (category) query = query.eq('category', category)
-  if (sellerId) query = query.eq('seller_id', sellerId)
+  const sellerIds = Array.from(new Set(listings.map((listing) => listing.seller_id)))
+  const sellers = sellerIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: sellerIds } },
+        select: { id: true, display_name: true, identity_level: true },
+      })
+    : []
+  const sellerMap = new Map(sellers.map((seller) => [seller.id, seller]))
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({ listings: data || [] })
+  return NextResponse.json({
+    listings: listings.map((listing) => ({
+      ...listing,
+      price: decimalToNumber(listing.price),
+      quality_score: listing.quality_score == null ? null : decimalToNumber(listing.quality_score),
+      created_at: listing.created_at.toISOString(),
+      members: sellerMap.get(listing.seller_id)
+        ? {
+            display_name: sellerMap.get(listing.seller_id)?.display_name || 'Seller',
+            identity_level: sellerMap.get(listing.seller_id)?.identity_level || 0,
+          }
+        : null,
+    })),
+  })
 }

@@ -2,12 +2,10 @@
 // components/chama/CreateChamaModal.tsx
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { X, Plus, Users, Loader2 } from 'lucide-react'
 
-export default function CreateChamaModal({ memberId }: { memberId: string }) {
+export default function CreateChamaModal() {
   const router = useRouter()
-  const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,26 +18,38 @@ export default function CreateChamaModal({ memberId }: { memberId: string }) {
 
   async function handleCreate() {
     setLoading(true); setError('')
-    const { data, error: e } = await supabase
-      .from('chamas')
-      .insert({
-        name: form.name,
-        description: form.description,
-        contribution_amount: Number(form.contribution_amount),
-        cycle_days: Number(form.cycle_days),
-        created_by: memberId,
-        status: 'forming',
+    try {
+      const res = await fetch('/api/chama/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          contributionAmount: Number(form.contribution_amount),
+          cycleDays: Number(form.cycle_days),
+        }),
       })
-      .select()
-      .single()
 
-    if (e) { setError(e.message); setLoading(false); return }
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Could not create group')
+        setLoading(false)
+        return
+      }
 
-    // Auto-join as member
-    await supabase.from('chama_members').insert({ chama_id: data.id, member_id: memberId })
-
-    setOpen(false)
-    router.refresh()
+      setOpen(false)
+      setForm({
+        name: '',
+        description: '',
+        contribution_amount: '',
+        cycle_days: '30',
+      })
+      router.refresh()
+    } catch {
+      setError('Could not create group')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

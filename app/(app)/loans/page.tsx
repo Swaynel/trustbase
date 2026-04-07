@@ -1,4 +1,6 @@
 // app/(app)/loans/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Landmark, Clock, CheckCircle2, AlertCircle, Lock } from 'lucide-react'
@@ -15,7 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 }
 
 export default async function LoansPage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
@@ -36,19 +38,81 @@ export default async function LoansPage() {
     )
   }
 
-  // My loans (as borrower)
-  const { data: myLoans } = await supabase
-    .from('loans')
-    .select('*, chamas(name)')
-    .eq('borrower_id', member.id)
-    .order('created_at', { ascending: false })
+  const [loanRows, guaranteeRows] = await Promise.all([
+    prisma.loan.findMany({
+      where: { borrower_id: member.id },
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.guarantee.findMany({
+      where: {
+        guarantor_id: member.id,
+        accepted: null,
+      },
+    }),
+  ])
 
-  // Pending guarantee requests (as guarantor)
-  const { data: pendingGuarantees } = await supabase
-    .from('guarantees')
-    .select('*, loans(id, amount, purpose, status, borrower_id, members!borrower_id(display_name))')
-    .eq('guarantor_id', member.id)
-    .is('accepted', null)
+  const guaranteeLoanIds = Array.from(new Set(guaranteeRows.map((guarantee) => guarantee.loan_id)))
+  const relatedChamaIds = Array.from(
+    new Set(
+      loanRows.map((loan) => loan.chama_id).filter((value): value is string => Boolean(value))
+    )
+  )
+
+  const [guaranteeLoans, chamas] = await Promise.all([
+    guaranteeLoanIds.length
+      ? prisma.loan.findMany({
+          where: { id: { in: guaranteeLoanIds } },
+          select: {
+            id: true,
+            amount: true,
+            purpose: true,
+            status: true,
+            borrower_id: true,
+          },
+        })
+      : Promise.resolve([]),
+    relatedChamaIds.length
+      ? prisma.chama.findMany({
+          where: { id: { in: relatedChamaIds } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  const guaranteeBorrowerIds = Array.from(new Set(guaranteeLoans.map((loan) => loan.borrower_id)))
+  const borrowerRows = guaranteeBorrowerIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: guaranteeBorrowerIds } },
+        select: { id: true, display_name: true },
+      })
+    : []
+
+  const chamaMap = new Map(chamas.map((chama) => [chama.id, chama.name]))
+  const guaranteeLoanMap = new Map(guaranteeLoans.map((loan) => [loan.id, loan]))
+  const borrowerMap = new Map(borrowerRows.map((row) => [row.id, row.display_name || 'Member']))
+
+  const myLoans = loanRows.map((loan) => ({
+    ...loan,
+    amount: decimalToNumber(loan.amount),
+    chamas: loan.chama_id ? { name: chamaMap.get(loan.chama_id) || null } : null,
+  }))
+
+  const pendingGuarantees = guaranteeRows.map((guarantee) => {
+    const loan = guaranteeLoanMap.get(guarantee.loan_id)
+    return {
+      ...guarantee,
+      stake_score: decimalToNumber(guarantee.stake_score),
+      loans: loan
+        ? {
+            ...loan,
+            amount: decimalToNumber(loan.amount),
+            members: {
+              display_name: borrowerMap.get(loan.borrower_id) || 'Member',
+            },
+          }
+        : null,
+    }
+  })
 
   return (
     <div className="space-y-6">
@@ -68,13 +132,13 @@ export default async function LoansPage() {
       </div>
 
       {/* Pending guarantee actions */}
-      {pendingGuarantees && pendingGuarantees.length > 0 && (
+      {pendingGuarantees.length > 0 && (
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">
             Guarantee requests ({pendingGuarantees.length})
           </h2>
           <div className="space-y-3">
-            {pendingGuarantees.map((g: any) => (
+            {pendingGuarantees.map((g) => (
               <div key={g.id} className="card border-amber-200 bg-amber-50">
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -87,7 +151,7 @@ export default async function LoansPage() {
                   </div>
                   <span className="text-xs text-earth-500">Stake: {g.stake_score} rep pts</span>
                 </div>
-                <GuaranteeAction guaranteeId={g.id} loanId={g.loans?.id} />
+                {g.loans && <GuaranteeAction guaranteeId={g.id} loanId={g.loans.id} />}
               </div>
             ))}
           </div>
@@ -97,7 +161,7 @@ export default async function LoansPage() {
       {/* My loans */}
       <section>
         <h2 className="font-display text-lg text-ink-900 mb-3">My loans</h2>
-        {!myLoans?.length ? (
+        {!myLoans.length ? (
           <div className="card text-center py-10">
             <Landmark className="w-10 h-10 text-earth-300 mx-auto mb-2" />
             <p className="text-sm text-earth-400">No loans yet</p>
@@ -105,10 +169,11 @@ export default async function LoansPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {myLoans.map((loan: any) => {
+            {myLoans.map((loan) => {
               const s = STATUS_CONFIG[loan.status] || STATUS_CONFIG.requested
-              const daysLeft = loan.due_at
-                ? Math.ceil((new Date(loan.due_at).getTime() - Date.now()) / 86400000)
+              const dueAt = loan.due_at
+              const daysLeft = dueAt
+                ? Math.ceil((new Date(dueAt).getTime() - Date.now()) / 86400000)
                 : null
               return (
                 <div key={loan.id} className="card">
@@ -127,7 +192,7 @@ export default async function LoansPage() {
                     {daysLeft !== null && loan.status === 'disbursed' && (
                       <div className={`text-right text-xs ${daysLeft < 3 ? 'text-red-500' : 'text-earth-400'}`}>
                         <p>{daysLeft > 0 ? `${daysLeft}d left` : 'OVERDUE'}</p>
-                        <p>Due {new Date(loan.due_at).toLocaleDateString()}</p>
+                        <p>Due {dueAt ? new Date(dueAt).toLocaleDateString() : 'N/A'}</p>
                       </div>
                     )}
                   </div>

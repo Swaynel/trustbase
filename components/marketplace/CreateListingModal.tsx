@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Upload, Loader2, Sparkles } from 'lucide-react'
 
-export default function CreateListingModal({ memberId }: { memberId: string }) {
+export default function CreateListingModal() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)

@@ -1,4 +1,6 @@
 // app/(app)/transfer/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ArrowLeftRight, Clock, CheckCircle2, Lock } from 'lucide-react'
@@ -14,7 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function TransferPage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
@@ -35,21 +37,54 @@ export default async function TransferPage() {
     )
   }
 
-  // My transfer requests
-  const { data: myTransfers } = await supabase
-    .from('transfer_requests')
-    .select('*, members!agent_id(display_name)')
-    .eq('sender_id', member.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  const [myTransferRows, agentRequestRows] = await Promise.all([
+    prisma.transferRequest.findMany({
+      where: { sender_id: member.id },
+      orderBy: { created_at: 'desc' },
+      take: 10,
+    }),
+    prisma.transferRequest.findMany({
+      where: {
+        status: 'open',
+        sender_id: { not: member.id },
+      },
+      take: 5,
+    }),
+  ])
 
-  // Incoming agent requests (if this member is acting as agent)
-  const { data: agentRequests } = await supabase
-    .from('transfer_requests')
-    .select('*, members!sender_id(display_name)')
-    .eq('status', 'open')
-    .neq('sender_id', member.id)
-    .limit(5)
+  const relatedMemberIds = Array.from(
+    new Set([
+      ...myTransferRows.map((row) => row.agent_id).filter((value): value is string => Boolean(value)),
+      ...agentRequestRows.map((row) => row.sender_id),
+    ])
+  )
+
+  const relatedMembers = relatedMemberIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: relatedMemberIds } },
+        select: { id: true, display_name: true },
+      })
+    : []
+
+  const relatedMemberMap = new Map(relatedMembers.map((row) => [row.id, row.display_name || 'Member']))
+
+  const myTransfers = myTransferRows.map((transfer) => ({
+    ...transfer,
+    amount: decimalToNumber(transfer.amount),
+    created_at: transfer.created_at.toISOString(),
+    expires_at: transfer.expires_at.toISOString(),
+    members: transfer.agent_id
+      ? { display_name: relatedMemberMap.get(transfer.agent_id) || 'Member' }
+      : null,
+  }))
+
+  const agentRequests = agentRequestRows.map((transfer) => ({
+    ...transfer,
+    amount: decimalToNumber(transfer.amount),
+    created_at: transfer.created_at.toISOString(),
+    expires_at: transfer.expires_at.toISOString(),
+    members: { display_name: relatedMemberMap.get(transfer.sender_id) || 'Member' },
+  }))
 
   return (
     <div className="space-y-6">
@@ -95,14 +130,14 @@ export default async function TransferPage() {
       </div>
 
       {/* Agent opportunities */}
-      {agentRequests && agentRequests.length > 0 && (
+      {agentRequests.length > 0 && (
         <div className="card">
           <h2 className="font-display text-lg text-ink-900 mb-1">Act as an agent</h2>
           <p className="text-xs text-earth-500 mb-4">
             Accept these requests and earn a small fee to your internal balance
           </p>
           <div className="space-y-3">
-            {agentRequests.map((t: any) => (
+            {agentRequests.map((t) => (
               <AgentRequestCard key={t.id} transfer={t} agentId={member.id} />
             ))}
           </div>
@@ -110,11 +145,11 @@ export default async function TransferPage() {
       )}
 
       {/* My transfer history */}
-      {myTransfers && myTransfers.length > 0 && (
+      {myTransfers.length > 0 && (
         <div className="card">
           <h2 className="font-display text-lg text-ink-900 mb-4">Transfer history</h2>
           <div className="space-y-2">
-            {myTransfers.map((t: any) => (
+            {myTransfers.map((t) => (
               <div key={t.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
                 <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-earth-100 flex items-center justify-center">
                   <ArrowLeftRight className="w-4 h-4 text-earth-600" />

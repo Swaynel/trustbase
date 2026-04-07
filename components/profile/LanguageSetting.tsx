@@ -2,7 +2,6 @@
 // components/profile/LanguageSetting.tsx
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 
 const LANGUAGES = [
@@ -13,20 +12,37 @@ const LANGUAGES = [
 ]
 
 export default function LanguageSetting({
-  currentLanguage, memberId, authId,
-}: { currentLanguage: string; memberId: string; authId: string }) {
+  currentLanguage,
+}: { currentLanguage: string }) {
   const router = useRouter()
-  const supabase = createClient()
   const [selected, setSelected] = useState(currentLanguage)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   async function save() {
     setSaving(true)
-    await supabase.from('members').update({ language: selected }).eq('id', memberId)
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    router.refresh()
+    setError('')
+    try {
+      const res = await fetch('/api/profile/language', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: selected }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not save language')
+      }
+
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+      router.refresh()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save language')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -56,6 +72,7 @@ export default function LanguageSetting({
          saved  ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
         {saved ? 'Saved!' : 'Save language'}
       </button>
+      {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
     </div>
   )
 }

@@ -1,4 +1,6 @@
 // app/(app)/dashboard/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -11,41 +13,87 @@ import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import RecentChamas from '@/components/dashboard/RecentChamas'
 
 export default async function DashboardPage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const { data: pillars } = await supabase
-    .from('identity_pillars')
-    .select('*')
-    .eq('member_id', member.id)
-    .single()
+  const [pillars, transactionRows, chamaMemberships, openVotes] = await Promise.all([
+    prisma.identityPillar.findFirst({
+      where: { member_id: member.id },
+    }),
+    prisma.transaction.findMany({
+      where: { member_id: member.id },
+      orderBy: { created_at: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        direction: true,
+        created_at: true,
+        metadata: true,
+      },
+    }),
+    prisma.chamaMember.findMany({
+      where: { member_id: member.id },
+      take: 3,
+      select: { chama_id: true },
+    }),
+    prisma.vote.findMany({
+      where: {
+        status: 'open',
+        window_closes_at: { gt: new Date() },
+      },
+      take: 1,
+      orderBy: { window_closes_at: 'asc' },
+      select: {
+        id: true,
+        proposal: true,
+        window_closes_at: true,
+      },
+    }),
+  ])
 
-  // Recent transactions (last 5)
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('id, type, amount, direction, created_at, metadata')
-    .eq('member_id', member.id)
-    .order('created_at', { ascending: false })
-    .limit(5)
+  const transactions = transactionRows.map((transaction) => ({
+    ...transaction,
+    amount: decimalToNumber(transaction.amount),
+    created_at: transaction.created_at.toISOString(),
+  }))
 
-  // Active chamas
-  const { data: chamaData } = await supabase
-    .from('chama_members')
-    .select('chamas(id, name, balance, status, contribution_amount)')
-    .eq('member_id', member.id)
-    .limit(3)
+  const serializedPillars = pillars
+    ? {
+        ...pillars,
+        pillar_1_score: decimalToNumber(pillars.pillar_1_score),
+        pillar_2_score: decimalToNumber(pillars.pillar_2_score),
+        pillar_3_score: decimalToNumber(pillars.pillar_3_score),
+        p2_days_present: pillars.p2_days_present ?? 0,
+        p3_threads: pillars.p3_threads ?? 0,
+      }
+    : null
 
-  const chamas = chamaData?.map((c: any) => c.chamas).filter(Boolean) || []
+  const chamaIds = chamaMemberships.map((membership) => membership.chama_id)
+  const chamaRows = chamaIds.length
+    ? await prisma.chama.findMany({
+        where: { id: { in: chamaIds } },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          status: true,
+          contribution_amount: true,
+        },
+      })
+    : []
 
-  // Open governance votes
-  const { data: openVotes } = await supabase
-    .from('votes')
-    .select('id, proposal, window_closes_at')
-    .eq('status', 'open')
-    .gt('window_closes_at', new Date().toISOString())
-    .limit(1)
+  const chamas = chamaIds
+    .map((id) => chamaRows.find((chama) => chama.id === id))
+    .filter((chama): chama is NonNullable<typeof chama> => Boolean(chama))
+    .map((chama) => ({
+      ...chama,
+      balance: decimalToNumber(chama.balance),
+      contribution_amount: decimalToNumber(chama.contribution_amount),
+    }))
 
   const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
   const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86400000)
@@ -64,7 +112,7 @@ export default async function DashboardPage() {
 
       {/* Identity card */}
       <div className="fade-in-2">
-        <IdentityCard member={member} pillars={pillars} />
+        <IdentityCard member={member} pillars={serializedPillars} />
       </div>
 
       {/* Stats row */}
@@ -116,7 +164,7 @@ export default async function DashboardPage() {
               View all <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <ActivityFeed transactions={transactions || []} />
+          <ActivityFeed transactions={transactions} />
         </div>
 
         {/* Savings groups */}
@@ -132,7 +180,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Open vote banner */}
-      {openVotes && openVotes.length > 0 && (
+      {openVotes.length > 0 && (
         <Link href="/governance" className="fade-in-5">
           <div className="card border-earth-300 bg-earth-50 flex items-center gap-4 hover:bg-earth-100 transition-colors">
             <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-earth-500 flex items-center justify-center">

@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["public", "auth"]
 }
 
 /// Supabase Auth remains the source of truth for authentication.
@@ -30,6 +31,7 @@ model Member {
   created_at              DateTime  @default(now()) @db.Timestamptz(6)
   updated_at              DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("members")
 }
 
@@ -46,6 +48,7 @@ model IdentityPillar {
   p3_threads      Int?     @default(0)
   updated_at      DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("identity_pillars")
 }
 
@@ -57,6 +60,7 @@ model IdentityEvent {
   reason     String?
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("identity_events")
 }
 
@@ -70,6 +74,7 @@ model IdentityFlag {
   reviewed_by String?  @db.Uuid
   created_at  DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("identity_flags")
 }
 
@@ -81,6 +86,7 @@ model OriginCorroboration {
   created_at      DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([subject_id, corroborator_id])
+  @@schema("public")
   @@map("origin_corroborations")
 }
 
@@ -96,6 +102,7 @@ model Chama {
   current_cycle_end   DateTime? @db.Date
   created_at          DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("chamas")
 }
 
@@ -107,6 +114,7 @@ model ChamaMember {
   payout_received    Boolean  @default(false)
 
   @@id([chama_id, member_id])
+  @@schema("public")
   @@map("chama_members")
 }
 
@@ -117,6 +125,7 @@ model ChamaEvent {
   metadata   Json?
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("chama_events")
 }
 
@@ -130,6 +139,7 @@ model Contribution {
   operator_id        String?  @db.Uuid
   created_at         DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("contributions")
 }
 
@@ -146,6 +156,7 @@ model Loan {
   repaid_at          DateTime? @db.Timestamptz(6)
   created_at         DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("loans")
 }
 
@@ -158,6 +169,7 @@ model Guarantee {
   outcome      String?
   created_at   DateTime  @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("guarantees")
 }
 
@@ -173,6 +185,7 @@ model Transaction {
   metadata           Json?
   created_at         DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("transactions")
 }
 
@@ -189,6 +202,7 @@ model Listing {
   listing_embedding   Unsupported("vector(1024)")?
   created_at          DateTime                   @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("listings")
 }
 
@@ -202,6 +216,7 @@ model Order {
   paystack_reference String?  @unique
   created_at         DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("orders")
 }
 
@@ -217,6 +232,7 @@ model Dispute {
   outcome                String?
   created_at             DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("disputes")
 }
 
@@ -231,6 +247,7 @@ model Vote {
   result           String?
   created_at       DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("votes")
 }
 
@@ -243,6 +260,7 @@ model VoteResponse {
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([vote_id, member_id])
+  @@schema("public")
   @@map("vote_responses")
 }
 
@@ -252,6 +270,7 @@ model GovernanceRule {
   updated_by String?  @db.Uuid
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("governance_rules")
 }
 
@@ -265,6 +284,7 @@ model TransferRequest {
   expires_at       DateTime @default(dbgenerated("(now() + '24:00:00'::interval)")) @db.Timestamptz(6)
   created_at       DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("transfer_requests")
 }
 
@@ -276,5 +296,6 @@ model UssdSession {
   pending_data Json?
   updated_at   DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
   @@map("ussd_sessions")
 }

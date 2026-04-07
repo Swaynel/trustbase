@@ -27,19 +27,5 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user) {
-    const { data: member } = await supabase
-      .from('members')
-      .select('id, identity_level, role')
-      .eq('auth_id', user.id)
-      .maybeSingle()
-
-    if (member) {
-      supabaseResponse.headers.set('x-user-id', member.id)
-      supabaseResponse.headers.set('x-user-level', String(member.identity_level))
-      supabaseResponse.headers.set('x-user-role', member.role)
-    }
-  }
-
   return { response: supabaseResponse, user }
 }

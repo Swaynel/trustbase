@@ -1,4 +1,6 @@
 // app/(app)/chama/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -6,34 +8,70 @@ import { Users, Plus, TrendingUp, Lock } from 'lucide-react'
 import CreateChamaModal from '@/components/chama/CreateChamaModal'
 
 export default async function ChamaPage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const { data: myChamas } = await supabase
-    .from('chama_members')
-    .select(`
-      total_contributed,
-      payout_received,
-      chamas(id, name, balance, status, contribution_amount, cycle_days, created_by)
-    `)
-    .eq('member_id', member.id)
+  const memberships = await prisma.chamaMember.findMany({
+    where: { member_id: member.id },
+    select: {
+      chama_id: true,
+      total_contributed: true,
+      payout_received: true,
+    },
+  })
 
-  const chamas = myChamas?.map((c: any) => ({
-    ...c.chamas,
-    total_contributed: c.total_contributed,
-    payout_received: c.payout_received,
-  })).filter(Boolean) || []
+  const myIds = memberships.map((membership) => membership.chama_id)
+  const myChamaRows = myIds.length
+    ? await prisma.chama.findMany({
+        where: { id: { in: myIds } },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          status: true,
+          contribution_amount: true,
+          cycle_days: true,
+          created_by: true,
+        },
+      })
+    : []
 
-  // All active chamas for discovery (not member of)
-  const myIds = chamas.map((c: any) => c.id)
-  const { data: openChamas } = await supabase
-    .from('chamas')
-    .select('id, name, balance, status, contribution_amount')
-    .eq('status', 'forming')
-    .not('id', 'in', myIds.length ? `(${myIds.map((id: string) => `'${id}'`).join(',')})` : `('')`)
-    .limit(6)
+  const chamas = memberships
+    .map((membership) => {
+      const chama = myChamaRows.find((row) => row.id === membership.chama_id)
+      if (!chama) return null
+      return {
+        ...chama,
+        balance: decimalToNumber(chama.balance),
+        contribution_amount: decimalToNumber(chama.contribution_amount),
+        total_contributed: decimalToNumber(membership.total_contributed),
+        payout_received: membership.payout_received,
+      }
+    })
+    .filter((chama): chama is NonNullable<typeof chama> => Boolean(chama))
+
+  const openChamaRows = await prisma.chama.findMany({
+    where: {
+      status: 'forming',
+      ...(myIds.length ? { id: { notIn: myIds } } : {}),
+    },
+    take: 6,
+    select: {
+      id: true,
+      name: true,
+      balance: true,
+      status: true,
+      contribution_amount: true,
+    },
+  })
+
+  const openChamas = openChamaRows.map((chama) => ({
+    ...chama,
+    balance: decimalToNumber(chama.balance),
+    contribution_amount: decimalToNumber(chama.contribution_amount),
+  }))
 
   const STATUS_COLORS: Record<string, string> = {
     forming: 'bg-amber-100 text-amber-700',
@@ -67,7 +105,7 @@ export default async function ChamaPage() {
           <p className="section-sub">Digital chamas — save together, grow together</p>
         </div>
         {member.identity_level >= 3 && (
-          <CreateChamaModal memberId={member.id} />
+          <CreateChamaModal />
         )}
       </div>
 
@@ -76,7 +114,7 @@ export default async function ChamaPage() {
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">My groups ({chamas.length})</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {chamas.map((c: any) => (
+            {chamas.map((c) => (
               <Link key={c.id} href={`/chama/${c.id}`}>
                 <div className="card hover:border-earth-300 hover:shadow-md transition-all cursor-pointer">
                   <div className="flex items-start justify-between mb-3">
@@ -113,7 +151,7 @@ export default async function ChamaPage() {
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">Open groups to join</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {openChamas.map((c: any) => (
+            {openChamas.map((c) => (
               <Link key={c.id} href={`/chama/${c.id}`}>
                 <div className="card hover:border-earth-300 transition-colors cursor-pointer border-dashed">
                   <div className="flex items-center gap-3 mb-2">

@@ -1,4 +1,6 @@
 // app/(app)/marketplace/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ShoppingBag, Plus, Lock } from 'lucide-react'
@@ -13,7 +15,7 @@ export default async function MarketplacePage({
 }: {
   searchParams: { q?: string; category?: string }
 }) {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
@@ -53,17 +55,40 @@ export default async function MarketplacePage({
   }
 
   if (!query) {
-    let dbQuery = supabase
-      .from('listings')
-      .select('id, title, description, category, price, cloudinary_public_id, seller_id, created_at, members!seller_id(display_name)')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(30)
+    const listingRows = await prisma.listing.findMany({
+      where: {
+        status: 'active',
+        ...(category ? { category } : {}),
+      },
+      orderBy: { created_at: 'desc' },
+      take: 30,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        price: true,
+        cloudinary_public_id: true,
+        seller_id: true,
+        created_at: true,
+      },
+    })
 
-    if (category) dbQuery = dbQuery.eq('category', category)
+    const sellerIds = Array.from(new Set(listingRows.map((listing) => listing.seller_id)))
+    const sellers = sellerIds.length
+      ? await prisma.member.findMany({
+          where: { id: { in: sellerIds } },
+          select: { id: true, display_name: true },
+        })
+      : []
+    const sellerMap = new Map(sellers.map((seller) => [seller.id, seller.display_name || 'Seller']))
 
-    const { data } = await dbQuery
-    listings = data || []
+    listings = listingRows.map((listing) => ({
+      ...listing,
+      price: decimalToNumber(listing.price),
+      created_at: listing.created_at.toISOString(),
+      members: { display_name: sellerMap.get(listing.seller_id) || 'Seller' },
+    }))
   }
 
   return (
@@ -74,7 +99,7 @@ export default async function MarketplacePage({
           <h1 className="section-title">Marketplace</h1>
           <p className="section-sub">Buy and sell within your community</p>
         </div>
-        <CreateListingModal memberId={member.id} />
+        <CreateListingModal />
       </div>
 
       {/* Search */}

@@ -1,4 +1,6 @@
 // app/(app)/marketplace/[id]/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ShoppingCart, AlertCircle, ArrowLeft, Star } from 'lucide-react'
@@ -12,30 +14,49 @@ const CATEGORY_EMOJI: Record<string, string> = {
 }
 
 export default async function ListingDetailPage({ params }: { params: { id: string } }) {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
   if (!member) redirect('/login')
 
-  const { data: listing } = await supabase
-    .from('listings')
-    .select('*, members!seller_id(id, display_name, identity_level, reputation_score)')
-    .eq('id', params.id)
-    .single()
+  const listing = await prisma.listing.findUnique({
+    where: { id: params.id },
+    select: {
+      id: true,
+      seller_id: true,
+      title: true,
+      description: true,
+      category: true,
+      price: true,
+      cloudinary_public_id: true,
+      status: true,
+      created_at: true,
+    },
+  })
 
   if (!listing) notFound()
 
-  const seller = listing.members as any
+  const seller = await prisma.member.findUnique({
+    where: { id: listing.seller_id },
+    select: {
+      id: true,
+      display_name: true,
+      identity_level: true,
+      reputation_score: true,
+    },
+  })
   const isOwner = seller?.id === member.id
 
-  // Check if buyer has an existing order
-  const { data: existingOrder } = await supabase
-    .from('orders')
-    .select('id, status')
-    .eq('listing_id', listing.id)
-    .eq('buyer_id', member.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+  const existingOrder = await prisma.order.findFirst({
+    where: {
+      listing_id: listing.id,
+      buyer_id: member.id,
+    },
+    orderBy: { created_at: 'desc' },
+    select: {
+      id: true,
+      status: true,
+    },
+  })
 
   const imgUrl = listing.cloudinary_public_id ? getListingUrl(listing.cloudinary_public_id) : null
 
@@ -50,10 +71,10 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
         <div className="aspect-video bg-earth-50 flex items-center justify-center relative">
           {imgUrl
             ? <img src={imgUrl} alt={listing.title} className="w-full h-full object-cover" />
-            : <span className="text-6xl">{CATEGORY_EMOJI[listing.category] || '📦'}</span>
+            : <span className="text-6xl">{CATEGORY_EMOJI[listing.category || 'other'] || '📦'}</span>
           }
           <span className="absolute top-3 left-3 badge bg-white/90 text-earth-700 shadow-sm">
-            {listing.category}
+            {listing.category || 'other'}
           </span>
         </div>
 
@@ -64,7 +85,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
               <p className="text-earth-600 leading-relaxed">{listing.description}</p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="font-display text-3xl text-earth-600">KES {listing.price.toLocaleString()}</p>
+              <p className="font-display text-3xl text-earth-600">KES {decimalToNumber(listing.price).toLocaleString()}</p>
             </div>
           </div>
 
@@ -79,7 +100,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                 <span>Level {seller?.identity_level || 0}</span>
                 <span>·</span>
                 <span className="flex items-center gap-1">
-                  <Star className="w-3 h-3" /> Rep {Math.round(seller?.reputation_score || 0)}/100
+                  <Star className="w-3 h-3" /> Rep {Math.round(decimalToNumber(seller?.reputation_score))}/100
                 </span>
               </div>
             </div>
@@ -104,7 +125,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
               )}
             </div>
           ) : listing.status === 'active' ? (
-            <BuyButton listing={{ id: listing.id, price: listing.price, title: listing.title }} />
+            <BuyButton listing={{ id: listing.id, price: decimalToNumber(listing.price), title: listing.title }} />
           ) : (
             <div className="p-3 rounded-xl bg-gray-50 text-center text-sm text-gray-500">
               This listing is no longer available

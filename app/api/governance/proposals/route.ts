@@ -1,7 +1,8 @@
 // app/api/governance/proposals/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createClient, getCurrentUserWithMember } from '@/lib/supabase/server'
+import { decimalToNumber } from '@/lib/prisma-utils'
+import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
@@ -36,15 +37,30 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status') || 'open'
+  const votes = await prisma.vote.findMany({
+    where: { status },
+    orderBy: { created_at: 'desc' },
+  })
 
-  const { data } = await supabase
-    .from('votes')
-    .select('*, proposer:members!proposer_id(display_name, identity_level)')
-    .eq('status', status)
-    .order('created_at', { ascending: false })
+  const proposerIds = Array.from(new Set(votes.map((vote) => vote.proposer_id)))
+  const proposers = proposerIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: proposerIds } },
+        select: { id: true, display_name: true, identity_level: true },
+      })
+    : []
+  const proposerMap = new Map(proposers.map((proposer) => [proposer.id, proposer]))
 
-  return NextResponse.json({ proposals: data || [] })
+  return NextResponse.json({
+    proposals: votes.map((vote) => ({
+      ...vote,
+      yes_weight: decimalToNumber(vote.yes_weight),
+      no_weight: decimalToNumber(vote.no_weight),
+      created_at: vote.created_at.toISOString(),
+      window_closes_at: vote.window_closes_at.toISOString(),
+      proposer: proposerMap.get(vote.proposer_id) || null,
+    })),
+  })
 }

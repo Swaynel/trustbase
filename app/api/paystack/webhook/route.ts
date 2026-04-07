@@ -1,8 +1,51 @@
 // app/api/paystack/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature, verifyTransaction } from '@/lib/paystack'
-import { createServiceClient } from '@/lib/supabase/server'
-import { sendSMS } from '@/lib/africastalking'
+import { prisma } from '@/lib/prisma'
+
+async function processLoanRepayment(loanId: string) {
+  const guarantees = await prisma.guarantee.findMany({
+    where: {
+      loan_id: loanId,
+      accepted: true,
+    },
+    select: {
+      id: true,
+      guarantor_id: true,
+      stake_score: true,
+    },
+  })
+
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+    select: { borrower_id: true },
+  })
+
+  await prisma.$transaction([
+    ...guarantees.map((guarantee) =>
+      prisma.$executeRaw`
+        UPDATE public.members
+        SET reputation_score = LEAST(100, reputation_score + ${guarantee.stake_score.toNumber() * 0.5})
+        WHERE id = ${guarantee.guarantor_id}::uuid
+      `
+    ),
+    ...guarantees.map((guarantee) =>
+      prisma.guarantee.update({
+        where: { id: guarantee.id },
+        data: { outcome: 'returned' },
+      })
+    ),
+    ...(loan?.borrower_id
+      ? [
+          prisma.$executeRaw`
+            UPDATE public.members
+            SET reputation_score = LEAST(100, reputation_score + 5)
+            WHERE id = ${loan.borrower_id}::uuid
+          `,
+        ]
+      : []),
+  ])
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -13,7 +56,6 @@ export async function POST(req: NextRequest) {
   }
 
   const event = JSON.parse(body)
-  const supabase = createServiceClient()
 
   // ── CHARGE SUCCESS ───────────────────────────────────────────────────────
   if (event.event === 'charge.success') {
@@ -29,67 +71,74 @@ export async function POST(req: NextRequest) {
     const amount = verification.data.amount / 100 // kobo → KES
 
     if (type === 'contribution' && chamaId && memberId) {
-      // Update contribution record
-      await supabase
-        .from('contributions')
-        .update({ status: 'success' })
-        .eq('paystack_reference', reference)
-
-      // Update chama balance
-      await supabase.rpc('increment_chama_balance', { chama_id: chamaId, amount })
-
-      // Update member's total_contributed in chama_members
-      await supabase.rpc('increment_member_contribution', {
-        chama_id: chamaId,
-        member_id: memberId,
-        amount,
-      })
-
-      // Log transaction
-      await supabase.from('transactions').insert({
-        member_id: memberId,
-        type: 'contribution',
-        amount,
-        direction: 'out',
-        paystack_reference: reference,
-        metadata: { chama_id: chamaId },
-      })
-
-      // Update Pillar 3 activity thread if this is a new counterpart
-      await supabase.rpc('maybe_add_activity_thread', {
-        member_id: memberId,
-        counterpart_type: 'chama_contribution',
-      })
+      await prisma.$transaction([
+        prisma.contribution.updateMany({
+          where: { paystack_reference: reference },
+          data: { status: 'success' },
+        }),
+        prisma.chama.update({
+          where: { id: chamaId },
+          data: {
+            balance: { increment: amount },
+          },
+        }),
+        prisma.chamaMember.update({
+          where: {
+            chama_id_member_id: {
+              chama_id: chamaId,
+              member_id: memberId,
+            },
+          },
+          data: {
+            total_contributed: { increment: amount },
+          },
+        }),
+        prisma.transaction.create({
+          data: {
+            member_id: memberId,
+            type: 'contribution',
+            amount,
+            direction: 'out',
+            paystack_reference: reference,
+            metadata: { chama_id: chamaId },
+          },
+        }),
+      ])
 
       // Can't un-hash the stored phone value here; use a notification-safe
       // contact channel if you add one later.
     }
 
-    if (type === 'marketplace_order' && orderId) {
-      await supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .eq('id', orderId)
-
-      await supabase.from('transactions').insert({
-        member_id: memberId,
-        type: 'marketplace_payment',
-        amount,
-        direction: 'out',
-        paystack_reference: reference,
-        metadata: { order_id: orderId },
-      })
+    if (type === 'marketplace_order' && orderId && memberId) {
+      await prisma.$transaction([
+        prisma.order.update({
+          where: { id: orderId },
+          data: { status: 'paid' },
+        }),
+        prisma.transaction.create({
+          data: {
+            member_id: memberId,
+            type: 'marketplace_payment',
+            amount,
+            direction: 'out',
+            paystack_reference: reference,
+            metadata: { order_id: orderId },
+          },
+        }),
+      ])
     }
 
     if (type === 'loan_repayment') {
       const { loanId } = metadata
-      await supabase
-        .from('loans')
-        .update({ status: 'repaid', repaid_at: new Date().toISOString() })
-        .eq('id', loanId)
 
-      // Boost guarantor reputation scores
-      await supabase.rpc('process_loan_repayment', { loan_id: loanId })
+      if (loanId) {
+        await prisma.loan.update({
+          where: { id: loanId },
+          data: { status: 'repaid', repaid_at: new Date() },
+        })
+
+        await processLoanRepayment(loanId)
+      }
     }
   }
 
@@ -100,39 +149,65 @@ export async function POST(req: NextRequest) {
 
     const amount = event.data.amount / 100
 
-    if (type === 'chama_payout' && chamaId) {
-      await supabase.rpc('mark_chama_member_paid', {
-        chama_id: chamaId,
-        member_id: memberId,
-      })
+    if (type === 'chama_payout' && chamaId && memberId) {
+      await prisma.$transaction(async (tx) => {
+        await tx.chamaMember.update({
+          where: {
+            chama_id_member_id: {
+              chama_id: chamaId,
+              member_id: memberId,
+            },
+          },
+          data: { payout_received: true },
+        })
 
-      await supabase.from('transactions').insert({
-        member_id: memberId,
-        type: 'chama_payout',
-        amount,
-        direction: 'in',
-        paystack_reference: reference,
+        const unpaidMembers = await tx.chamaMember.count({
+          where: {
+            chama_id: chamaId,
+            payout_received: false,
+          },
+        })
+
+        if (unpaidMembers === 0) {
+          await tx.chama.update({
+            where: { id: chamaId },
+            data: { status: 'closed' },
+          })
+        }
+
+        await tx.transaction.create({
+          data: {
+            member_id: memberId,
+            type: 'chama_payout',
+            amount,
+            direction: 'in',
+            paystack_reference: reference,
+          },
+        })
       })
     }
 
-    if (type === 'loan_disbursement' && loanId) {
-      await supabase
-        .from('loans')
-        .update({
-          status: 'disbursed',
-          disbursed_at: new Date().toISOString(),
-          paystack_reference: reference,
-        })
-        .eq('id', loanId)
-
-      await supabase.from('transactions').insert({
-        member_id: memberId,
-        type: 'loan_disbursement',
-        amount,
-        direction: 'in',
-        paystack_reference: reference,
-        metadata: { loan_id: loanId },
-      })
+    if (type === 'loan_disbursement' && loanId && memberId) {
+      await prisma.$transaction([
+        prisma.loan.update({
+          where: { id: loanId },
+          data: {
+            status: 'disbursed',
+            disbursed_at: new Date(),
+            paystack_reference: reference,
+          },
+        }),
+        prisma.transaction.create({
+          data: {
+            member_id: memberId,
+            type: 'loan_disbursement',
+            amount,
+            direction: 'in',
+            paystack_reference: reference,
+            metadata: { loan_id: loanId },
+          },
+        }),
+      ])
     }
   }
 

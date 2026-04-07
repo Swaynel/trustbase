@@ -1,4 +1,6 @@
 // app/(app)/governance/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Vote, Plus, CheckCircle2, XCircle, Clock } from 'lucide-react'
@@ -6,41 +8,53 @@ import VoteButton from '@/components/governance/VoteButton'
 import CreateProposalModal from '@/components/governance/CreateProposalModal'
 
 export default async function GovernancePage() {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  // Open votes
-  const { data: openVotes } = await supabase
-    .from('votes')
-    .select('*')
-    .eq('status', 'open')
-    .gt('window_closes_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
+  const [openVoteRows, closedVoteRows, rules] = await Promise.all([
+    prisma.vote.findMany({
+      where: {
+        status: 'open',
+        window_closes_at: { gt: new Date() },
+      },
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.vote.findMany({
+      where: { status: 'closed' },
+      orderBy: { window_closes_at: 'desc' },
+      take: 10,
+    }),
+    prisma.governanceRule.findMany({
+      orderBy: { key: 'asc' },
+    }),
+  ])
 
-  // Closed votes (last 10)
-  const { data: closedVotes } = await supabase
-    .from('votes')
-    .select('*')
-    .eq('status', 'closed')
-    .order('window_closes_at', { ascending: false })
-    .limit(10)
+  const openVotes = openVoteRows.map((vote) => ({
+    ...vote,
+    yes_weight: decimalToNumber(vote.yes_weight),
+    no_weight: decimalToNumber(vote.no_weight),
+  }))
 
-  // My votes
+  const closedVotes = closedVoteRows.map((vote) => ({
+    ...vote,
+    yes_weight: decimalToNumber(vote.yes_weight),
+    no_weight: decimalToNumber(vote.no_weight),
+  }))
+
   const myVoteIds = new Set<string>()
-  if (openVotes?.length) {
-    const { data: myResponses } = await supabase
-      .from('vote_responses')
-      .select('vote_id, choice')
-      .eq('member_id', member.id)
-      .in('vote_id', openVotes.map((v: any) => v.id))
+  if (openVotes.length) {
+    const myResponses = await prisma.voteResponse.findMany({
+      where: {
+        member_id: member.id,
+        vote_id: { in: openVotes.map((vote) => vote.id) },
+      },
+      select: { vote_id: true },
+    })
 
-    myResponses?.forEach((r: any) => myVoteIds.add(r.vote_id))
+    myResponses.forEach((response) => myVoteIds.add(response.vote_id))
   }
-
-  // Governance rules
-  const { data: rules } = await supabase.from('governance_rules').select('*')
 
   const WEIGHT = member.identity_level === 4 ? 3 : member.identity_level
   const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
@@ -90,17 +104,17 @@ export default async function GovernancePage() {
       {/* Open votes */}
       <section>
         <h2 className="font-display text-lg text-ink-900 mb-3">
-          Open votes ({openVotes?.length || 0})
+          Open votes ({openVotes.length || 0})
         </h2>
 
-        {!openVotes?.length ? (
+        {!openVotes.length ? (
           <div className="card text-center py-10">
             <Vote className="w-10 h-10 text-earth-300 mx-auto mb-2" />
             <p className="text-sm text-earth-400">No open votes right now</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {openVotes.map((v: any) => {
+            {openVotes.map((v) => {
               const total = v.yes_weight + v.no_weight
               const yesPct = total > 0 ? Math.round((v.yes_weight / total) * 100) : 50
               const noPct = 100 - yesPct
@@ -151,11 +165,11 @@ export default async function GovernancePage() {
       </section>
 
       {/* Closed votes */}
-      {closedVotes && closedVotes.length > 0 && (
+      {closedVotes.length > 0 && (
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">Past votes</h2>
           <div className="space-y-2">
-            {closedVotes.map((v: any) => (
+            {closedVotes.map((v) => (
               <div key={v.id} className="card py-3 px-4 flex items-center gap-3">
                 {v.result === 'passed'
                   ? <CheckCircle2 className="w-4 h-4 text-forest-500 flex-shrink-0" />
@@ -173,12 +187,12 @@ export default async function GovernancePage() {
       )}
 
       {/* Current rules */}
-      {rules && rules.length > 0 && (
+      {rules.length > 0 && (
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">Community rules</h2>
           <div className="card">
             <div className="space-y-2">
-              {rules.map((r: any) => (
+              {rules.map((r) => (
                 <div key={r.key} className="flex items-center justify-between py-2 border-b border-earth-100 last:border-0">
                   <p className="text-sm text-earth-600 font-mono">{r.key.replace(/_/g, ' ')}</p>
                   <p className="text-sm font-medium text-ink-900">{r.value}</p>

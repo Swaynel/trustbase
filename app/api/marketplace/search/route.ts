@@ -1,10 +1,10 @@
 // app/api/marketplace/search/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { embedQuery } from '@/lib/cohere'
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')
 
@@ -15,28 +15,108 @@ export async function GET(req: NextRequest) {
   try {
     // Embed the query
     const queryEmbedding = await embedQuery(q)
-    const vectorStr = `[${queryEmbedding.join(',')}]`
+    const vector = `[${queryEmbedding.join(',')}]`
 
-    // pgvector cosine similarity search
-    const { data, error } = await supabase.rpc('search_listings', {
-      query_embedding: vectorStr,
-      match_threshold: 0.3,
-      match_count: 20,
-    })
+    const rows = await prisma.$queryRaw<Array<{
+      id: string
+      title: string
+      description: string
+      category: string | null
+      price: unknown
+      cloudinary_public_id: string | null
+      seller_id: string
+      created_at: Date
+      similarity: number
+    }>>`
+      SELECT
+        l.id,
+        l.title,
+        l.description,
+        l.category,
+        l.price,
+        l.cloudinary_public_id,
+        l.seller_id,
+        l.created_at,
+        1 - (l.listing_embedding <=> ${vector}::vector) AS similarity
+      FROM public.listings l
+      WHERE
+        l.status = 'active'
+        AND l.listing_embedding IS NOT NULL
+        AND 1 - (l.listing_embedding <=> ${vector}::vector) > ${0.3}
+      ORDER BY l.listing_embedding <=> ${vector}::vector
+      LIMIT ${20}
+    `
 
-    if (error) {
-      // Fallback to text search if vector search fails
-      const { data: fallback } = await supabase
-        .from('listings')
-        .select('id, title, description, category, price, cloudinary_public_id, seller_id, members!seller_id(display_name, identity_level)')
-        .eq('status', 'active')
-        .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
-        .limit(20)
+    if (!rows.length) {
+      const fallbackRows = await prisma.listing.findMany({
+        where: {
+          status: 'active',
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: 20,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          price: true,
+          cloudinary_public_id: true,
+          seller_id: true,
+          created_at: true,
+        },
+      })
 
-      return NextResponse.json({ listings: fallback || [], method: 'text' })
+      const fallbackSellerIds = Array.from(new Set(fallbackRows.map((listing) => listing.seller_id)))
+      const fallbackSellers = fallbackSellerIds.length
+        ? await prisma.member.findMany({
+            where: { id: { in: fallbackSellerIds } },
+            select: { id: true, display_name: true, identity_level: true },
+          })
+        : []
+      const fallbackSellerMap = new Map(fallbackSellers.map((seller) => [seller.id, seller]))
+
+      return NextResponse.json({
+        listings: fallbackRows.map((listing) => ({
+          ...listing,
+          price: decimalToNumber(listing.price),
+          created_at: listing.created_at.toISOString(),
+          members: fallbackSellerMap.get(listing.seller_id)
+            ? {
+                display_name: fallbackSellerMap.get(listing.seller_id)?.display_name || 'Seller',
+                identity_level: fallbackSellerMap.get(listing.seller_id)?.identity_level || 0,
+              }
+            : null,
+        })),
+        method: 'text',
+      })
     }
 
-    return NextResponse.json({ listings: data || [], method: 'semantic' })
+    const sellerIds = Array.from(new Set(rows.map((row) => row.seller_id)))
+    const sellers = sellerIds.length
+      ? await prisma.member.findMany({
+          where: { id: { in: sellerIds } },
+          select: { id: true, display_name: true, identity_level: true },
+        })
+      : []
+    const sellerMap = new Map(sellers.map((seller) => [seller.id, seller]))
+
+    return NextResponse.json({
+      listings: rows.map((row) => ({
+        ...row,
+        price: decimalToNumber(row.price as number | string),
+        created_at: row.created_at.toISOString(),
+        members: sellerMap.get(row.seller_id)
+          ? {
+              display_name: sellerMap.get(row.seller_id)?.display_name || 'Seller',
+              identity_level: sellerMap.get(row.seller_id)?.identity_level || 0,
+            }
+          : null,
+      })),
+      method: 'semantic',
+    })
   } catch (e) {
     console.error('Search error:', e)
     return NextResponse.json({ listings: [], error: 'Search unavailable' }, { status: 500 })

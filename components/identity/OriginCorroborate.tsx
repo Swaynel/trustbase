@@ -3,13 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Globe, Loader2, CheckCircle2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 export default function OriginCorroborate({
   memberId, originCountry, currentScore,
 }: { memberId: string; originCountry: string; currentScore: number }) {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [memberId2, setMemberId2] = useState('')
@@ -19,12 +17,22 @@ export default function OriginCorroborate({
     if (!memberId2.trim()) return
     setLoading(true); setError('')
     try {
-      const { error: e } = await supabase.from('origin_corroborations').insert({
-        subject_id: memberId2.trim(),
-        corroborator_id: memberId,
-        origin_country: originCountry,
+      const res = await fetch('/api/identity/corroborations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subjectId: memberId2.trim(),
+          originCountry,
+        }),
       })
-      if (e) { setError(e.message); setLoading(false); return }
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Could not record corroboration')
+        setLoading(false)
+        return
+      }
+
       setDone(true)
       router.refresh()
     } catch {

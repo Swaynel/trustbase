@@ -1,4 +1,6 @@
 // app/(app)/chama/[id]/page.tsx
+import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { Users, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
@@ -6,46 +8,87 @@ import ContributeButton from '@/components/chama/ContributeButton'
 import RequestLoanButton from '@/components/loans/RequestLoanButton'
 
 export default async function ChamaDetailPage({ params }: { params: { id: string } }) {
-  const { supabase, user, member } = await getCurrentUserWithMember()
+  const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const { data: chama } = await supabase
-    .from('chamas')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  const chama = await prisma.chama.findUnique({
+    where: { id: params.id },
+  })
 
   if (!chama) notFound()
 
-  // Membership check
-  const { data: membership } = await supabase
-    .from('chama_members')
-    .select('total_contributed, payout_received')
-    .eq('chama_id', chama.id)
-    .eq('member_id', member.id)
-    .single()
+  const [membership, memberRows, contributionRows] = await Promise.all([
+    prisma.chamaMember.findUnique({
+      where: {
+        chama_id_member_id: {
+          chama_id: chama.id,
+          member_id: member.id,
+        },
+      },
+      select: {
+        total_contributed: true,
+        payout_received: true,
+      },
+    }),
+    prisma.chamaMember.findMany({
+      where: { chama_id: chama.id },
+      select: {
+        member_id: true,
+        total_contributed: true,
+        payout_received: true,
+      },
+    }),
+    prisma.contribution.findMany({
+      where: { chama_id: chama.id },
+      orderBy: { created_at: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        member_id: true,
+        amount: true,
+        status: true,
+        created_at: true,
+      },
+    }),
+  ])
 
-  // All members with names
-  const { data: membersData } = await supabase
-    .from('chama_members')
-    .select('total_contributed, payout_received, members(id, display_name, identity_level)')
-    .eq('chama_id', chama.id)
+  const relatedMemberIds = Array.from(
+    new Set([
+      ...memberRows.map((row) => row.member_id),
+      ...contributionRows.map((row) => row.member_id),
+    ])
+  )
 
-  const chamaMemberList = membersData?.map((m: any) => ({
-    ...m.members,
-    total_contributed: m.total_contributed,
-    payout_received: m.payout_received,
-  })).filter(Boolean) || []
+  const relatedMembers = relatedMemberIds.length
+    ? await prisma.member.findMany({
+        where: { id: { in: relatedMemberIds } },
+        select: { id: true, display_name: true, identity_level: true },
+      })
+    : []
 
-  // Recent contributions
-  const { data: contributions } = await supabase
-    .from('contributions')
-    .select('id, amount, status, created_at, members(display_name)')
-    .eq('chama_id', chama.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  const memberMap = new Map(relatedMembers.map((row) => [row.id, row]))
+
+  const chamaMemberList = memberRows.map((row) => {
+    const relatedMember = memberMap.get(row.member_id)
+    return {
+      id: row.member_id,
+      display_name: relatedMember?.display_name || 'Anonymous',
+      identity_level: relatedMember?.identity_level || 0,
+      total_contributed: decimalToNumber(row.total_contributed),
+      payout_received: row.payout_received,
+    }
+  })
+
+  const contributions = contributionRows.map((contribution) => ({
+    ...contribution,
+    amount: decimalToNumber(contribution.amount),
+    created_at: contribution.created_at.toISOString(),
+    members: {
+      display_name: memberMap.get(contribution.member_id)?.display_name || 'Member',
+    },
+  }))
 
   const isMember = !!membership
   const cycleProgress = chama.current_cycle_end
@@ -76,7 +119,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
           </div>
           <div className="text-right">
             <p className="text-xs text-earth-400">Pool balance</p>
-            <p className="font-display text-3xl text-earth-600">KES {chama.balance.toLocaleString()}</p>
+            <p className="font-display text-3xl text-earth-600">KES {decimalToNumber(chama.balance).toLocaleString()}</p>
           </div>
         </div>
 
@@ -87,7 +130,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
         <div className="grid grid-cols-3 gap-3 text-center py-3 border-y border-earth-100 mb-4">
           <div>
             <p className="text-xs text-earth-400">Contribution</p>
-            <p className="font-medium text-ink-900">KES {chama.contribution_amount}</p>
+            <p className="font-medium text-ink-900">KES {decimalToNumber(chama.contribution_amount)}</p>
           </div>
           <div>
             <p className="text-xs text-earth-400">Cycle</p>
@@ -117,7 +160,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
           <div className="flex items-center justify-between bg-earth-50 rounded-xl p-3 mb-4">
             <div>
               <p className="text-xs text-earth-400">My total contributed</p>
-              <p className="font-medium text-ink-900">KES {membership.total_contributed.toLocaleString()}</p>
+              <p className="font-medium text-ink-900">KES {decimalToNumber(membership.total_contributed).toLocaleString()}</p>
             </div>
             {membership.payout_received && (
               <span className="badge bg-green-100 text-green-700">
@@ -130,7 +173,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
         {/* Actions */}
         {isMember && chama.status === 'active' && (
           <div className="flex gap-3">
-            <ContributeButton chamaId={chama.id} amount={chama.contribution_amount} />
+            <ContributeButton chamaId={chama.id} amount={decimalToNumber(chama.contribution_amount)} />
             {member.identity_level >= 2 && (
               <RequestLoanButton chamaId={chama.id} memberList={chamaMemberList} currentMemberId={member.id} />
             )}
@@ -142,7 +185,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
       <div className="card">
         <h2 className="font-display text-lg text-ink-900 mb-4">Members ({chamaMemberList.length})</h2>
         <div className="space-y-2">
-          {chamaMemberList.map((m: any) => (
+          {chamaMemberList.map((m) => (
             <div key={m.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-earth-200 flex items-center justify-center text-xs font-medium text-earth-700">
                 {(m.display_name || '?').charAt(0).toUpperCase()}
@@ -165,7 +208,7 @@ export default async function ChamaDetailPage({ params }: { params: { id: string
         <div className="card">
           <h2 className="font-display text-lg text-ink-900 mb-4">Recent contributions</h2>
           <div className="space-y-2">
-            {contributions.map((c: any) => (
+            {contributions.map((c) => (
               <div key={c.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.status === 'success' ? 'bg-green-400' : c.status === 'pending' ? 'bg-amber-400' : 'bg-red-400'}`} />
                 <div className="flex-1">
