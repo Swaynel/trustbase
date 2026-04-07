@@ -1,5 +1,4 @@
 // app/(app)/chama/[id]/page.tsx
-import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
@@ -12,30 +11,26 @@ type ChamaDetailPageProps = {
   params: Promise<{ id: string }>
 }
 
-type MembershipRow = Prisma.ChamaMemberGetPayload<{
-  select: {
-    total_contributed: true
-    payout_received: true
-  }
-}>
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
 
-type ChamaMemberRow = Prisma.ChamaMemberGetPayload<{
-  select: {
-    member_id: true
-    total_contributed: true
-    payout_received: true
-  }
-}>
+type MembershipRow = {
+  total_contributed: DecimalValue
+  payout_received: boolean
+}
 
-type ContributionRow = Prisma.ContributionGetPayload<{
-  select: {
-    id: true
-    member_id: true
-    amount: true
-    status: true
-    created_at: true
-  }
-}>
+type ChamaMemberRow = {
+  member_id: string
+  total_contributed: DecimalValue
+  payout_received: boolean
+}
+
+type ContributionRow = {
+  id: string
+  member_id: string
+  amount: DecimalValue
+  status: string
+  created_at: Date
+}
 
 export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) {
   const { id } = await params
