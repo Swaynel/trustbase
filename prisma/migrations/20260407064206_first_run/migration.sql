@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- CreateTable
 CREATE TABLE "members" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),

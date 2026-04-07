@@ -1,4 +1,5 @@
 // app/(app)/chama/[id]/page.tsx
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
@@ -7,19 +8,53 @@ import { Users, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
 import ContributeButton from '@/components/chama/ContributeButton'
 import RequestLoanButton from '@/components/loans/RequestLoanButton'
 
-export default async function ChamaDetailPage({ params }: { params: { id: string } }) {
+type ChamaDetailPageProps = {
+  params: Promise<{ id: string }>
+}
+
+type MembershipRow = Prisma.ChamaMemberGetPayload<{
+  select: {
+    total_contributed: true
+    payout_received: true
+  }
+}>
+
+type ChamaMemberRow = Prisma.ChamaMemberGetPayload<{
+  select: {
+    member_id: true
+    total_contributed: true
+    payout_received: true
+  }
+}>
+
+type ContributionRow = Prisma.ContributionGetPayload<{
+  select: {
+    id: true
+    member_id: true
+    amount: true
+    status: true
+    created_at: true
+  }
+}>
+
+export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) {
+  const { id } = await params
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
   const chama = await prisma.chama.findUnique({
-    where: { id: params.id },
+    where: { id },
   })
 
   if (!chama) notFound()
 
-  const [membership, memberRows, contributionRows] = await Promise.all([
+  const [membership, memberRows, contributionRows]: [
+    MembershipRow | null,
+    ChamaMemberRow[],
+    ContributionRow[],
+  ] = await Promise.all([
     prisma.chamaMember.findUnique({
       where: {
         chama_id_member_id: {

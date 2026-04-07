@@ -56,6 +56,7 @@ export default defineConfig({
   },
   migrations: {
     initShadowDb: `
+      CREATE EXTENSION IF NOT EXISTS vector;
       CREATE SCHEMA IF NOT EXISTS auth;
       CREATE TABLE IF NOT EXISTS auth.users (
         id UUID PRIMARY KEY

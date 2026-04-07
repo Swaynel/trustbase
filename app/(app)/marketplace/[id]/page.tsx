@@ -13,13 +13,18 @@ const CATEGORY_EMOJI: Record<string, string> = {
   food: '🌽', clothing: '👗', services: '🔧', electronics: '📱', crafts: '🧶', other: '📦',
 }
 
-export default async function ListingDetailPage({ params }: { params: { id: string } }) {
+type ListingDetailPageProps = {
+  params: Promise<{ id: string }>
+}
+
+export default async function ListingDetailPage({ params }: ListingDetailPageProps) {
+  const { id } = await params
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
   if (!member) redirect('/login')
 
   const listing = await prisma.listing.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       id: true,
       seller_id: true,
