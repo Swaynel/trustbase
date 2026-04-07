@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
     )
 
     return NextResponse.json({
-      listings: rows.map((row) => ({
+      listings: rows.map((row: (typeof rows)[number]) => ({
         ...row,
         price: decimalToNumber(row.price as number | string),
         created_at: row.created_at.toISOString(),

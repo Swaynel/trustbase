@@ -6,13 +6,29 @@ import { redirect } from 'next/navigation'
 import { Shield } from 'lucide-react'
 import OperatorActions from '@/components/operator/OperatorActions'
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type RecentOpRow = {
+  id: string
+  member_id: string
+  type: string
+  amount: DecimalValue
+  direction: string
+  created_at: Date
+}
+
+type ServedMemberRow = {
+  id: string
+  display_name: string | null
+}
+
 export default async function OperatorDashboard() {
   const { user, member: operator } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!operator || !['operator', 'admin'].includes(operator.role)) redirect('/dashboard')
 
-  const recentOpRows = await prisma.transaction.findMany({
+  const recentOpRows: RecentOpRow[] = await prisma.transaction.findMany({
     where: { operator_id: operator.id },
     orderBy: { created_at: 'desc' },
     take: 10,
@@ -26,22 +42,22 @@ export default async function OperatorDashboard() {
     },
   })
 
-  const memberIds = Array.from(new Set(recentOpRows.map((transaction) => transaction.member_id)))
-  const servedMembers = memberIds.length
+  const memberIds = Array.from(new Set(recentOpRows.map((transaction: RecentOpRow) => transaction.member_id)))
+  const servedMembers: ServedMemberRow[] = memberIds.length
     ? await prisma.member.findMany({
         where: { id: { in: memberIds } },
         select: { id: true, display_name: true },
       })
     : []
 
-  const recentOps = recentOpRows.map((transaction) => ({
+  const recentOps = recentOpRows.map((transaction: RecentOpRow) => ({
     ...transaction,
     amount: decimalToNumber(transaction.amount),
     created_at: transaction.created_at.toISOString(),
-    members: servedMembers.find((member) => member.id === transaction.member_id)
+    members: servedMembers.find((member: ServedMemberRow) => member.id === transaction.member_id)
       ? {
           display_name:
-            servedMembers.find((member) => member.id === transaction.member_id)?.display_name || 'Member',
+            servedMembers.find((member: ServedMemberRow) => member.id === transaction.member_id)?.display_name || 'Member',
         }
       : null,
   }))

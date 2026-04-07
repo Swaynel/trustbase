@@ -3,8 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature, verifyTransaction } from '@/lib/paystack'
 import { prisma } from '@/lib/prisma'
 
+type GuaranteeRow = {
+  id: string
+  guarantor_id: string
+  stake_score: { toNumber(): number }
+}
+
 async function processLoanRepayment(loanId: string) {
-  const guarantees = await prisma.guarantee.findMany({
+  const guarantees: GuaranteeRow[] = await prisma.guarantee.findMany({
     where: {
       loan_id: loanId,
       accepted: true,
@@ -22,14 +28,14 @@ async function processLoanRepayment(loanId: string) {
   })
 
   await prisma.$transaction([
-    ...guarantees.map((guarantee) =>
+    ...guarantees.map((guarantee: GuaranteeRow) =>
       prisma.$executeRaw`
         UPDATE public.members
         SET reputation_score = LEAST(100, reputation_score + ${guarantee.stake_score.toNumber() * 0.5})
         WHERE id = ${guarantee.guarantor_id}::uuid
       `
     ),
-    ...guarantees.map((guarantee) =>
+    ...guarantees.map((guarantee: GuaranteeRow) =>
       prisma.guarantee.update({
         where: { id: guarantee.id },
         data: { outcome: 'returned' },

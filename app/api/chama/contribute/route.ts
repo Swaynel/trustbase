@@ -1,7 +1,14 @@
 // app/api/chama/contribute/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
+
+type ContributionRow = {
+  id: string
+  amount: Parameters<typeof decimalToNumber>[0]
+  created_at: Date
+}
 
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
@@ -35,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Return amount for the client to initiate Paystack charge
-  return NextResponse.json({ amount: chama.contribution_amount.toNumber(), chamaId })
+  return NextResponse.json({ amount: decimalToNumber(chama.contribution_amount), chamaId })
 }
 
 export async function GET(req: NextRequest) {
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
 
-  const contributions = await prisma.contribution.findMany({
+  const contributions: ContributionRow[] = await prisma.contribution.findMany({
     where: {
       member_id: member.id,
       ...(chamaId ? { chama_id: chamaId } : {}),
@@ -56,9 +63,9 @@ export async function GET(req: NextRequest) {
   })
 
   return NextResponse.json({
-    contributions: contributions.map((contribution) => ({
+    contributions: contributions.map((contribution: ContributionRow) => ({
       ...contribution,
-      amount: contribution.amount.toNumber(),
+      amount: decimalToNumber(contribution.amount),
       created_at: contribution.created_at.toISOString(),
     })),
   })

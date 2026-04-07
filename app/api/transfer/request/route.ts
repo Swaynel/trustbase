@@ -3,16 +3,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
-function serializeTransfer(transfer: {
+type DecimalLike = { toNumber(): number }
+
+type TransferRow = {
   id: string
   sender_id: string
-  amount: { toNumber(): number }
+  amount: DecimalLike
   destination_city: string
   agent_id: string | null
   status: string
   expires_at: Date
   created_at: Date
-}) {
+}
+
+function serializeTransfer(transfer: TransferRow) {
   return {
     ...transfer,
     amount: transfer.amount.toNumber(),
@@ -109,13 +113,13 @@ export async function GET(req: NextRequest) {
 
   if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
 
-  const transfers = await prisma.transferRequest.findMany({
+  const transfers: TransferRow[] = await prisma.transferRequest.findMany({
     where: { sender_id: member.id },
     orderBy: { created_at: 'desc' },
   })
 
   return NextResponse.json({
-    transfers: transfers.map((transfer) => serializeTransfer(transfer)),
+    transfers: transfers.map((transfer: TransferRow) => serializeTransfer(transfer)),
   })
 }
 

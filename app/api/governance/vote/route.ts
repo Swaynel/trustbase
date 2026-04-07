@@ -1,7 +1,13 @@
 // app/api/governance/vote/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
+
+type VoteResponseRow = {
+  choice: string
+  weight: Parameters<typeof decimalToNumber>[0]
+}
 
 function getVoteWeight(level: number): number {
   if (level === 0) return 0 // observers cannot vote
@@ -61,17 +67,17 @@ export async function POST(req: NextRequest) {
   })
 
   // Update running totals on votes table
-  const allResponses = await prisma.voteResponse.findMany({
+  const allResponses: VoteResponseRow[] = await prisma.voteResponse.findMany({
     where: { vote_id: voteId },
     select: { choice: true, weight: true },
   })
 
   const yes = allResponses
-    .filter((response) => response.choice === 'yes')
-    .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+    .filter((response: VoteResponseRow) => response.choice === 'yes')
+    .reduce((sum, response) => sum + decimalToNumber(response.weight), 0)
   const no = allResponses
-    .filter((response) => response.choice === 'no')
-    .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+    .filter((response: VoteResponseRow) => response.choice === 'no')
+    .reduce((sum, response) => sum + decimalToNumber(response.weight), 0)
 
   await prisma.vote.update({
     where: { id: voteId },

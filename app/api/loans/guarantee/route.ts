@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { initiateTransfer } from '@/lib/paystack'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
+type GuaranteeDecisionRow = {
+  accepted: boolean | null
+}
+
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,14 +30,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Check if we have majority acceptance
-  const allGuarantees = await prisma.guarantee.findMany({
+  const allGuarantees: GuaranteeDecisionRow[] = await prisma.guarantee.findMany({
     where: { loan_id: loanId },
     select: { accepted: true },
   })
 
-  const accepted = allGuarantees.filter((guarantee) => guarantee.accepted === true).length
+  const accepted = allGuarantees.filter((guarantee: GuaranteeDecisionRow) => guarantee.accepted === true).length
   const total = allGuarantees.length
-  const rejected = allGuarantees.filter((guarantee) => guarantee.accepted === false).length
+  const rejected = allGuarantees.filter((guarantee: GuaranteeDecisionRow) => guarantee.accepted === false).length
 
   // Majority rejected → cancel loan
   if (rejected > total / 2) {
