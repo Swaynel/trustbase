@@ -16,6 +16,41 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   defaulted:    { label: 'Defaulted',  color: 'bg-red-100 text-red-700',      icon: <AlertCircle className="w-3.5 h-3.5" /> },
 }
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type LoanRow = {
+  id: string
+  chama_id: string | null
+  amount: DecimalValue
+  purpose: string | null
+  status: string
+  due_at: Date | null
+}
+
+type GuaranteeRow = {
+  id: string
+  loan_id: string
+  stake_score: DecimalValue
+}
+
+type GuaranteeLoanRow = {
+  id: string
+  amount: DecimalValue
+  purpose: string | null
+  status: string
+  borrower_id: string
+}
+
+type ChamaRow = {
+  id: string
+  name: string
+}
+
+type BorrowerRow = {
+  id: string
+  display_name: string | null
+}
+
 export default async function LoansPage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
@@ -38,7 +73,7 @@ export default async function LoansPage() {
     )
   }
 
-  const [loanRows, guaranteeRows] = await Promise.all([
+  const [loanRowsRaw, guaranteeRowsRaw] = await Promise.all([
     prisma.loan.findMany({
       where: { borrower_id: member.id },
       orderBy: { created_at: 'desc' },
@@ -51,14 +86,17 @@ export default async function LoansPage() {
     }),
   ])
 
-  const guaranteeLoanIds = Array.from(new Set(guaranteeRows.map((guarantee) => guarantee.loan_id)))
+  const loanRows: LoanRow[] = loanRowsRaw
+  const guaranteeRows: GuaranteeRow[] = guaranteeRowsRaw
+
+  const guaranteeLoanIds = Array.from(new Set(guaranteeRows.map((guarantee: GuaranteeRow) => guarantee.loan_id)))
   const relatedChamaIds = Array.from(
     new Set(
-      loanRows.map((loan) => loan.chama_id).filter((value): value is string => Boolean(value))
+      loanRows.map((loan: LoanRow) => loan.chama_id).filter((value): value is string => Boolean(value))
     )
   )
 
-  const [guaranteeLoans, chamas] = await Promise.all([
+  const [guaranteeLoansRaw, chamasRaw] = await Promise.all([
     guaranteeLoanIds.length
       ? prisma.loan.findMany({
           where: { id: { in: guaranteeLoanIds } },
@@ -79,25 +117,32 @@ export default async function LoansPage() {
       : Promise.resolve([]),
   ])
 
-  const guaranteeBorrowerIds = Array.from(new Set(guaranteeLoans.map((loan) => loan.borrower_id)))
-  const borrowerRows = guaranteeBorrowerIds.length
+  const guaranteeLoans: GuaranteeLoanRow[] = guaranteeLoansRaw
+  const chamas: ChamaRow[] = chamasRaw
+
+  const guaranteeBorrowerIds = Array.from(new Set(guaranteeLoans.map((loan: GuaranteeLoanRow) => loan.borrower_id)))
+  const borrowerRows: BorrowerRow[] = guaranteeBorrowerIds.length
     ? await prisma.member.findMany({
         where: { id: { in: guaranteeBorrowerIds } },
         select: { id: true, display_name: true },
       })
     : []
 
-  const chamaMap = new Map(chamas.map((chama) => [chama.id, chama.name]))
-  const guaranteeLoanMap = new Map(guaranteeLoans.map((loan) => [loan.id, loan]))
-  const borrowerMap = new Map(borrowerRows.map((row) => [row.id, row.display_name || 'Member']))
+  const chamaMap = new Map<string, string>(chamas.map((chama: ChamaRow) => [chama.id, chama.name]))
+  const guaranteeLoanMap = new Map<string, GuaranteeLoanRow>(
+    guaranteeLoans.map((loan: GuaranteeLoanRow) => [loan.id, loan])
+  )
+  const borrowerMap = new Map<string, string>(
+    borrowerRows.map((row: BorrowerRow) => [row.id, row.display_name || 'Member'])
+  )
 
-  const myLoans = loanRows.map((loan) => ({
+  const myLoans = loanRows.map((loan: LoanRow) => ({
     ...loan,
     amount: decimalToNumber(loan.amount),
     chamas: loan.chama_id ? { name: chamaMap.get(loan.chama_id) || null } : null,
   }))
 
-  const pendingGuarantees = guaranteeRows.map((guarantee) => {
+  const pendingGuarantees = guaranteeRows.map((guarantee: GuaranteeRow) => {
     const loan = guaranteeLoanMap.get(guarantee.loan_id)
     return {
       ...guarantee,

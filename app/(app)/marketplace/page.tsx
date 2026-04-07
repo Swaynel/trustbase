@@ -10,11 +10,30 @@ import CreateListingModal from '@/components/marketplace/CreateListingModal'
 
 const CATEGORIES = ['all', 'food', 'clothing', 'services', 'electronics', 'crafts', 'other']
 
-export default async function MarketplacePage({
-  searchParams,
-}: {
-  searchParams: { q?: string; category?: string }
-}) {
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type MarketplacePageProps = {
+  searchParams: Promise<{ q?: string; category?: string }>
+}
+
+type ListingRow = {
+  id: string
+  title: string
+  description: string
+  category: string | null
+  price: DecimalValue
+  cloudinary_public_id: string | null
+  seller_id: string
+  created_at: Date
+}
+
+type SellerRow = {
+  id: string
+  display_name: string | null
+}
+
+export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
+  const resolvedSearchParams = await searchParams
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
@@ -38,8 +57,10 @@ export default async function MarketplacePage({
 
   // Fetch listings — if search query, use semantic search endpoint
   let listings: any[] = []
-  const query = searchParams.q?.trim()
-  const category = searchParams.category && searchParams.category !== 'all' ? searchParams.category : null
+  const query = resolvedSearchParams.q?.trim()
+  const category = resolvedSearchParams.category && resolvedSearchParams.category !== 'all'
+    ? resolvedSearchParams.category
+    : null
 
   if (query) {
     try {
@@ -55,7 +76,7 @@ export default async function MarketplacePage({
   }
 
   if (!query) {
-    const listingRows = await prisma.listing.findMany({
+    const listingRows: ListingRow[] = await prisma.listing.findMany({
       where: {
         status: 'active',
         ...(category ? { category } : {}),
@@ -74,17 +95,20 @@ export default async function MarketplacePage({
       },
     })
 
-    const sellerIds = Array.from(new Set(listingRows.map((listing) => listing.seller_id)))
-    const sellers = sellerIds.length
+    const sellerIds = Array.from(new Set(listingRows.map((listing: ListingRow) => listing.seller_id)))
+    const sellers: SellerRow[] = sellerIds.length
       ? await prisma.member.findMany({
           where: { id: { in: sellerIds } },
           select: { id: true, display_name: true },
         })
       : []
-    const sellerMap = new Map(sellers.map((seller) => [seller.id, seller.display_name || 'Seller']))
+    const sellerMap = new Map<string, string>(
+      sellers.map((seller: SellerRow) => [seller.id, seller.display_name || 'Seller'])
+    )
 
-    listings = listingRows.map((listing) => ({
+    listings = listingRows.map((listing: ListingRow) => ({
       ...listing,
+      category: listing.category || 'other',
       price: decimalToNumber(listing.price),
       created_at: listing.created_at.toISOString(),
       members: { display_name: sellerMap.get(listing.seller_id) || 'Seller' },
@@ -103,7 +127,7 @@ export default async function MarketplacePage({
       </div>
 
       {/* Search */}
-      <SearchBar defaultValue={searchParams.q} />
+      <SearchBar defaultValue={resolvedSearchParams.q} />
 
       {/* Category filter */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">

@@ -7,13 +7,33 @@ import { Vote, Plus, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import VoteButton from '@/components/governance/VoteButton'
 import CreateProposalModal from '@/components/governance/CreateProposalModal'
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type VoteRow = {
+  id: string
+  proposal: string
+  yes_weight: DecimalValue
+  no_weight: DecimalValue
+  result: string | null
+  window_closes_at: Date
+}
+
+type GovernanceRuleRow = {
+  key: string
+  value: string
+}
+
+type VoteResponseRow = {
+  vote_id: string
+}
+
 export default async function GovernancePage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const [openVoteRows, closedVoteRows, rules] = await Promise.all([
+  const [openVoteRowsRaw, closedVoteRowsRaw, rulesRaw] = await Promise.all([
     prisma.vote.findMany({
       where: {
         status: 'open',
@@ -31,13 +51,17 @@ export default async function GovernancePage() {
     }),
   ])
 
-  const openVotes = openVoteRows.map((vote) => ({
+  const openVoteRows: VoteRow[] = openVoteRowsRaw
+  const closedVoteRows: VoteRow[] = closedVoteRowsRaw
+  const rules: GovernanceRuleRow[] = rulesRaw
+
+  const openVotes = openVoteRows.map((vote: VoteRow) => ({
     ...vote,
     yes_weight: decimalToNumber(vote.yes_weight),
     no_weight: decimalToNumber(vote.no_weight),
   }))
 
-  const closedVotes = closedVoteRows.map((vote) => ({
+  const closedVotes = closedVoteRows.map((vote: VoteRow) => ({
     ...vote,
     yes_weight: decimalToNumber(vote.yes_weight),
     no_weight: decimalToNumber(vote.no_weight),
@@ -45,15 +69,15 @@ export default async function GovernancePage() {
 
   const myVoteIds = new Set<string>()
   if (openVotes.length) {
-    const myResponses = await prisma.voteResponse.findMany({
+    const myResponses: VoteResponseRow[] = await prisma.voteResponse.findMany({
       where: {
         member_id: member.id,
         vote_id: { in: openVotes.map((vote) => vote.id) },
       },
-      select: { vote_id: true },
-    })
+        select: { vote_id: true },
+      })
 
-    myResponses.forEach((response) => myVoteIds.add(response.vote_id))
+    myResponses.forEach((response: VoteResponseRow) => myVoteIds.add(response.vote_id))
   }
 
   const WEIGHT = member.identity_level === 4 ? 3 : member.identity_level

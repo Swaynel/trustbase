@@ -12,13 +12,42 @@ import IdentityCard from '@/components/identity/IdentityCard'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import RecentChamas from '@/components/dashboard/RecentChamas'
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type TransactionRow = {
+  id: string
+  type: string
+  amount: DecimalValue
+  direction: string
+  created_at: Date
+  metadata: unknown
+}
+
+type ChamaMembershipRow = {
+  chama_id: string
+}
+
+type ChamaRow = {
+  id: string
+  name: string
+  balance: DecimalValue
+  status: string
+  contribution_amount: DecimalValue
+}
+
+type OpenVoteRow = {
+  id: string
+  proposal: string
+  window_closes_at: Date
+}
+
 export default async function DashboardPage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const [pillars, transactionRows, chamaMemberships, openVotes] = await Promise.all([
+  const [pillars, transactionRowsRaw, chamaMembershipsRaw, openVotesRaw] = await Promise.all([
     prisma.identityPillar.findFirst({
       where: { member_id: member.id },
     }),
@@ -55,7 +84,11 @@ export default async function DashboardPage() {
     }),
   ])
 
-  const transactions = transactionRows.map((transaction) => ({
+  const transactionRows: TransactionRow[] = transactionRowsRaw
+  const chamaMemberships: ChamaMembershipRow[] = chamaMembershipsRaw
+  const openVotes: OpenVoteRow[] = openVotesRaw
+
+  const transactions = transactionRows.map((transaction: TransactionRow) => ({
     ...transaction,
     amount: decimalToNumber(transaction.amount),
     created_at: transaction.created_at.toISOString(),
@@ -72,8 +105,8 @@ export default async function DashboardPage() {
       }
     : null
 
-  const chamaIds = chamaMemberships.map((membership) => membership.chama_id)
-  const chamaRows = chamaIds.length
+  const chamaIds = chamaMemberships.map((membership: ChamaMembershipRow) => membership.chama_id)
+  const chamaRows: ChamaRow[] = chamaIds.length
     ? await prisma.chama.findMany({
         where: { id: { in: chamaIds } },
         select: {
@@ -87,9 +120,9 @@ export default async function DashboardPage() {
     : []
 
   const chamas = chamaIds
-    .map((id) => chamaRows.find((chama) => chama.id === id))
+    .map((id: string) => chamaRows.find((chama: ChamaRow) => chama.id === id))
     .filter((chama): chama is NonNullable<typeof chama> => Boolean(chama))
-    .map((chama) => ({
+    .map((chama: ChamaRow) => ({
       ...chama,
       balance: decimalToNumber(chama.balance),
       contribution_amount: decimalToNumber(chama.contribution_amount),

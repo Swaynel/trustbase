@@ -1,11 +1,30 @@
 // app/api/ussd/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { sendSMS, ussdContinue, ussdEnd, USSD_MENUS } from '@/lib/africastalking'
 import { explainIdentity, onboardingGuide } from '@/lib/cohere'
 import crypto from 'crypto'
+
+type MembershipRow = {
+  chama_id: string
+}
+
+type ChamaBalanceRow = {
+  id: string
+  name: string
+  balance: Parameters<typeof decimalToNumber>[0]
+  status: string
+}
+
+type ChamaNameRow = {
+  name: string | null
+}
+
+type VoteResponseRow = {
+  choice: string
+  weight: Parameters<typeof decimalToNumber>[0]
+}
 
 function hashPhone(phone: string) {
   return crypto.createHash('sha256').update(phone.trim()).digest('hex')
@@ -41,7 +60,6 @@ export async function POST(req: NextRequest) {
         member_id: member?.id ?? null,
         phone_hash: phoneHash,
         current_menu: 'main',
-        pending_data: Prisma.JsonNull,
         updated_at: new Date(),
       },
       create: {
@@ -49,7 +67,6 @@ export async function POST(req: NextRequest) {
         member_id: member?.id ?? null,
         phone_hash: phoneHash,
         current_menu: 'main',
-        pending_data: Prisma.JsonNull,
       },
     })
 
@@ -119,15 +136,15 @@ export async function POST(req: NextRequest) {
 
   // 2 → Savings group balance
   if (root === '2' && member) {
-    const memberships = await prisma.chamaMember.findMany({
+    const memberships: MembershipRow[] = await prisma.chamaMember.findMany({
       where: { member_id: member.id },
       take: 3,
       select: { chama_id: true },
     })
 
-    const chamas = memberships.length
+    const chamas: ChamaBalanceRow[] = memberships.length
       ? await prisma.chama.findMany({
-          where: { id: { in: memberships.map((membership) => membership.chama_id) } },
+          where: { id: { in: memberships.map((membership: MembershipRow) => membership.chama_id) } },
           select: { id: true, name: true, balance: true, status: true },
         })
       : []
@@ -141,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     const chama = chamas[0]
     return new NextResponse(
-      USSD_MENUS.savings(chama.balance.toNumber(), chama.name),
+      USSD_MENUS.savings(decimalToNumber(chama.balance), chama.name),
       { headers: { 'Content-Type': 'text/plain' } }
     )
   }
@@ -184,17 +201,17 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      const allResponses = await prisma.voteResponse.findMany({
+      const allResponses: VoteResponseRow[] = await prisma.voteResponse.findMany({
         where: { vote_id: openVotes.id },
         select: { choice: true, weight: true },
       })
 
       const yes = allResponses
-        .filter((response) => response.choice === 'yes')
-        .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+        .filter((response: VoteResponseRow) => response.choice === 'yes')
+        .reduce((sum, response) => sum + decimalToNumber(response.weight), 0)
       const no = allResponses
-        .filter((response) => response.choice === 'no')
-        .reduce((sum, response) => sum + response.weight.toNumber(), 0)
+        .filter((response: VoteResponseRow) => response.choice === 'no')
+        .reduce((sum, response) => sum + decimalToNumber(response.weight), 0)
 
       await prisma.vote.update({
         where: { id: openVotes.id },
@@ -219,19 +236,21 @@ export async function POST(req: NextRequest) {
   // 0 → Help (triggers Cohere onboarding)
   if (root === '0' && member) {
     try {
-      const activeMemberships = await prisma.chamaMember.findMany({
+      const activeMemberships: MembershipRow[] = await prisma.chamaMember.findMany({
         where: { member_id: member.id },
         select: { chama_id: true },
       })
 
-      const activeChamas = activeMemberships.length
+      const activeChamas: ChamaNameRow[] = activeMemberships.length
         ? await prisma.chama.findMany({
-            where: { id: { in: activeMemberships.map((membership) => membership.chama_id) } },
+            where: { id: { in: activeMemberships.map((membership: MembershipRow) => membership.chama_id) } },
             select: { name: true },
           })
         : []
 
-      const chamaNames = activeChamas.map((chama) => chama.name).filter(Boolean)
+      const chamaNames = activeChamas
+        .map((chama: ChamaNameRow) => chama.name)
+        .filter((name): name is string => Boolean(name))
       const guide = await onboardingGuide({
         question: 'What is TrustBase and how do I get started?',
         language: member.language,

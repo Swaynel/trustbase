@@ -4,6 +4,24 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type VoteRow = {
+  id: string
+  proposer_id: string
+  proposal: string
+  yes_weight: DecimalValue
+  no_weight: DecimalValue
+  created_at: Date
+  window_closes_at: Date
+}
+
+type ProposerRow = {
+  id: string
+  display_name: string | null
+  identity_level: number
+}
+
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -39,22 +57,24 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status') || 'open'
-  const votes = await prisma.vote.findMany({
+  const votes: VoteRow[] = await prisma.vote.findMany({
     where: { status },
     orderBy: { created_at: 'desc' },
   })
 
-  const proposerIds = Array.from(new Set(votes.map((vote) => vote.proposer_id)))
-  const proposers = proposerIds.length
+  const proposerIds = Array.from(new Set(votes.map((vote: VoteRow) => vote.proposer_id)))
+  const proposers: ProposerRow[] = proposerIds.length
     ? await prisma.member.findMany({
         where: { id: { in: proposerIds } },
         select: { id: true, display_name: true, identity_level: true },
       })
     : []
-  const proposerMap = new Map(proposers.map((proposer) => [proposer.id, proposer]))
+  const proposerMap = new Map<string, ProposerRow>(
+    proposers.map((proposer: ProposerRow) => [proposer.id, proposer])
+  )
 
   return NextResponse.json({
-    proposals: votes.map((vote) => ({
+    proposals: votes.map((vote: VoteRow) => ({
       ...vote,
       yes_weight: decimalToNumber(vote.yes_weight),
       no_weight: decimalToNumber(vote.no_weight),

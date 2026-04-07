@@ -15,6 +15,31 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-600',
 }
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type TransferRequestRow = {
+  id: string
+  sender_id: string
+  agent_id: string | null
+  amount: DecimalValue
+  destination_city: string
+  status: string
+  created_at: Date
+  expires_at: Date
+}
+
+type RelatedMemberRow = {
+  id: string
+  display_name: string | null
+}
+
+type SerializedTransfer = Omit<TransferRequestRow, 'amount' | 'created_at' | 'expires_at'> & {
+  amount: number
+  created_at: string
+  expires_at: string
+  members: { display_name: string } | null
+}
+
 export default async function TransferPage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
@@ -37,7 +62,7 @@ export default async function TransferPage() {
     )
   }
 
-  const [myTransferRows, agentRequestRows] = await Promise.all([
+  const [myTransferRowsRaw, agentRequestRowsRaw] = await Promise.all([
     prisma.transferRequest.findMany({
       where: { sender_id: member.id },
       orderBy: { created_at: 'desc' },
@@ -52,23 +77,28 @@ export default async function TransferPage() {
     }),
   ])
 
+  const myTransferRows: TransferRequestRow[] = myTransferRowsRaw
+  const agentRequestRows: TransferRequestRow[] = agentRequestRowsRaw
+
   const relatedMemberIds = Array.from(
     new Set([
-      ...myTransferRows.map((row) => row.agent_id).filter((value): value is string => Boolean(value)),
-      ...agentRequestRows.map((row) => row.sender_id),
+      ...myTransferRows.map((row: TransferRequestRow) => row.agent_id).filter((value): value is string => Boolean(value)),
+      ...agentRequestRows.map((row: TransferRequestRow) => row.sender_id),
     ])
   )
 
-  const relatedMembers = relatedMemberIds.length
+  const relatedMembers: RelatedMemberRow[] = relatedMemberIds.length
     ? await prisma.member.findMany({
         where: { id: { in: relatedMemberIds } },
         select: { id: true, display_name: true },
       })
     : []
 
-  const relatedMemberMap = new Map(relatedMembers.map((row) => [row.id, row.display_name || 'Member']))
+  const relatedMemberMap = new Map<string, string>(
+    relatedMembers.map((row: RelatedMemberRow) => [row.id, row.display_name || 'Member'])
+  )
 
-  const myTransfers = myTransferRows.map((transfer) => ({
+  const myTransfers: SerializedTransfer[] = myTransferRows.map((transfer: TransferRequestRow) => ({
     ...transfer,
     amount: decimalToNumber(transfer.amount),
     created_at: transfer.created_at.toISOString(),
@@ -78,7 +108,7 @@ export default async function TransferPage() {
       : null,
   }))
 
-  const agentRequests = agentRequestRows.map((transfer) => ({
+  const agentRequests: SerializedTransfer[] = agentRequestRows.map((transfer: TransferRequestRow) => ({
     ...transfer,
     amount: decimalToNumber(transfer.amount),
     created_at: transfer.created_at.toISOString(),
@@ -175,7 +205,7 @@ export default async function TransferPage() {
   )
 }
 
-function AgentRequestCard({ transfer, agentId }: { transfer: any; agentId: string }) {
+function AgentRequestCard({ transfer, agentId }: { transfer: SerializedTransfer; agentId: string }) {
   const expiresIn = Math.ceil((new Date(transfer.expires_at).getTime() - Date.now()) / 3600000)
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl border border-earth-200 bg-earth-50">

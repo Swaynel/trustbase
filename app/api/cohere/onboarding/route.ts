@@ -4,6 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { onboardingGuide } from '@/lib/cohere'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
+type MembershipRow = {
+  chama_id: string
+}
+
+type ChamaNameRow = {
+  name: string | null
+}
+
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -13,24 +21,26 @@ export async function POST(req: NextRequest) {
 
   if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
 
-  const activeMemberships = await prisma.chamaMember.findMany({
+  const activeMemberships: MembershipRow[] = await prisma.chamaMember.findMany({
     where: { member_id: member.id },
     select: { chama_id: true },
     take: 5,
   })
 
-  const activeChamas = activeMemberships.length > 0
+  const activeChamas: ChamaNameRow[] = activeMemberships.length > 0
     ? await prisma.chama.findMany({
         where: {
           id: {
-            in: activeMemberships.map((membership) => membership.chama_id),
+            in: activeMemberships.map((membership: MembershipRow) => membership.chama_id),
           },
         },
         select: { name: true },
       })
     : []
 
-  const chamaNames = activeChamas.map((chama) => chama.name).filter(Boolean)
+  const chamaNames = activeChamas
+    .map((chama: ChamaNameRow) => chama.name)
+    .filter((name): name is string => Boolean(name))
 
   const answer = await onboardingGuide({
     question,

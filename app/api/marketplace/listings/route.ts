@@ -7,6 +7,27 @@ import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
 const PROHIBITED_KEYWORDS = ['weapon', 'drug', 'alcohol', 'counterfeit', 'stolen', 'fake id', 'illegal']
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type ListingRow = {
+  id: string
+  title: string
+  description: string
+  category: string | null
+  price: DecimalValue
+  cloudinary_public_id: string | null
+  status: string
+  quality_score: DecimalValue
+  created_at: Date
+  seller_id: string
+}
+
+type SellerRow = {
+  id: string
+  display_name: string | null
+  identity_level: number
+}
+
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -106,7 +127,7 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category')
   const sellerId = searchParams.get('sellerId')
 
-  const listings = await prisma.listing.findMany({
+  const listings: ListingRow[] = await prisma.listing.findMany({
     where: {
       status: 'active',
       ...(category ? { category } : {}),
@@ -128,17 +149,19 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  const sellerIds = Array.from(new Set(listings.map((listing) => listing.seller_id)))
-  const sellers = sellerIds.length
+  const sellerIds = Array.from(new Set(listings.map((listing: ListingRow) => listing.seller_id)))
+  const sellers: SellerRow[] = sellerIds.length
     ? await prisma.member.findMany({
         where: { id: { in: sellerIds } },
         select: { id: true, display_name: true, identity_level: true },
       })
     : []
-  const sellerMap = new Map(sellers.map((seller) => [seller.id, seller]))
+  const sellerMap = new Map<string, SellerRow>(
+    sellers.map((seller: SellerRow) => [seller.id, seller])
+  )
 
   return NextResponse.json({
-    listings: listings.map((listing) => ({
+    listings: listings.map((listing: ListingRow) => ({
       ...listing,
       price: decimalToNumber(listing.price),
       quality_score: listing.quality_score == null ? null : decimalToNumber(listing.quality_score),

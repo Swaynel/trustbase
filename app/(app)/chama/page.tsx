@@ -7,13 +7,29 @@ import Link from 'next/link'
 import { Users, Plus, TrendingUp, Lock } from 'lucide-react'
 import CreateChamaModal from '@/components/chama/CreateChamaModal'
 
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type MembershipRow = {
+  chama_id: string
+  total_contributed: DecimalValue
+  payout_received: boolean
+}
+
+type ChamaRow = {
+  id: string
+  name: string
+  balance: DecimalValue
+  status: string
+  contribution_amount: DecimalValue
+}
+
 export default async function ChamaPage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const memberships = await prisma.chamaMember.findMany({
+  const memberships: MembershipRow[] = await prisma.chamaMember.findMany({
     where: { member_id: member.id },
     select: {
       chama_id: true,
@@ -22,8 +38,8 @@ export default async function ChamaPage() {
     },
   })
 
-  const myIds = memberships.map((membership) => membership.chama_id)
-  const myChamaRows = myIds.length
+  const myIds = memberships.map((membership: MembershipRow) => membership.chama_id)
+  const myChamaRows: ChamaRow[] = myIds.length
     ? await prisma.chama.findMany({
         where: { id: { in: myIds } },
         select: {
@@ -39,8 +55,8 @@ export default async function ChamaPage() {
     : []
 
   const chamas = memberships
-    .map((membership) => {
-      const chama = myChamaRows.find((row) => row.id === membership.chama_id)
+    .map((membership: MembershipRow) => {
+      const chama = myChamaRows.find((row: ChamaRow) => row.id === membership.chama_id)
       if (!chama) return null
       return {
         ...chama,
@@ -52,7 +68,7 @@ export default async function ChamaPage() {
     })
     .filter((chama): chama is NonNullable<typeof chama> => Boolean(chama))
 
-  const openChamaRows = await prisma.chama.findMany({
+  const openChamaRows: ChamaRow[] = await prisma.chama.findMany({
     where: {
       status: 'forming',
       ...(myIds.length ? { id: { notIn: myIds } } : {}),
@@ -67,7 +83,7 @@ export default async function ChamaPage() {
     },
   })
 
-  const openChamas = openChamaRows.map((chama) => ({
+  const openChamas = openChamaRows.map((chama: ChamaRow) => ({
     ...chama,
     balance: decimalToNumber(chama.balance),
     contribution_amount: decimalToNumber(chama.contribution_amount),

@@ -1,7 +1,23 @@
 // app/api/marketplace/orders/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
+
+type DecimalValue = Parameters<typeof decimalToNumber>[0]
+
+type OrderRow = {
+  id: string
+  listing_id: string
+  amount: DecimalValue
+  created_at: Date
+}
+
+type ListingRow = {
+  id: string
+  title: string
+  cloudinary_public_id: string | null
+}
 
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
@@ -43,10 +59,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     order: {
       ...order,
-      amount: order.amount.toNumber(),
+      amount: decimalToNumber(order.amount),
       created_at: order.created_at.toISOString(),
     },
-    amount: listing.price.toNumber(),
+    amount: decimalToNumber(listing.price),
   })
 }
 
@@ -59,25 +75,27 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const role = searchParams.get('role') || 'buyer'
 
-  const orders = await prisma.order.findMany({
+  const orders: OrderRow[] = await prisma.order.findMany({
     where: role === 'seller' ? { seller_id: member.id } : { buyer_id: member.id },
     orderBy: { created_at: 'desc' },
   })
 
-  const listingIds = [...new Set(orders.map((order) => order.listing_id))]
-  const listings = listingIds.length > 0
+  const listingIds = [...new Set(orders.map((order: OrderRow) => order.listing_id))]
+  const listings: ListingRow[] = listingIds.length > 0
     ? await prisma.listing.findMany({
         where: { id: { in: listingIds } },
         select: { id: true, title: true, cloudinary_public_id: true },
       })
     : []
 
-  const listingsById = new Map(listings.map((listing) => [listing.id, listing]))
+  const listingsById = new Map<string, ListingRow>(
+    listings.map((listing: ListingRow) => [listing.id, listing])
+  )
 
   return NextResponse.json({
-    orders: orders.map((order) => ({
+    orders: orders.map((order: OrderRow) => ({
       ...order,
-      amount: order.amount.toNumber(),
+      amount: decimalToNumber(order.amount),
       created_at: order.created_at.toISOString(),
       listings: listingsById.get(order.listing_id) || null,
     })),
