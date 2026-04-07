@@ -10,13 +10,21 @@ import OriginCorroborate from '@/components/identity/OriginCorroborate'
 const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
 const LANG_NAMES: Record<string, string> = { en: 'English', sw: 'Swahili', fr: 'Français', ar: 'العربية' }
 
+type LoanStatRow = {
+  status: string
+}
+
+type ContributionStatRow = {
+  status: string
+}
+
 export default async function ProfilePage() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) redirect('/login')
 
   if (!member) redirect('/login')
 
-  const [pillars, txCount, chamaCount, loanStats, contribs] = await Promise.all([
+  const [pillars, txCount, chamaCount, loanStatsRaw, contribsRaw] = await Promise.all([
     prisma.identityPillar.findFirst({
       where: { member_id: member.id },
     }),
@@ -36,12 +44,15 @@ export default async function ProfilePage() {
     }),
   ])
 
-  const repaidLoans = loanStats.filter((loan) => loan.status === 'repaid').length
+  const loanStats: LoanStatRow[] = loanStatsRaw
+  const contribs: ContributionStatRow[] = contribsRaw
+
+  const repaidLoans = loanStats.filter((loan: LoanStatRow) => loan.status === 'repaid').length
   const totalLoans = loanStats.length
   const repayRate = totalLoans > 0 ? Math.round((repaidLoans / totalLoans) * 100) : 100
   const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86400000)
 
-  const successContribs = contribs.filter((contribution) => contribution.status === 'success').length
+  const successContribs = contribs.filter((contribution: ContributionStatRow) => contribution.status === 'success').length
   const totalContribs = contribs.length
   const savingsConsistency = totalContribs > 0 ? Math.round((successContribs / totalContribs) * 100) : 0
   const serializedPillars = pillars
