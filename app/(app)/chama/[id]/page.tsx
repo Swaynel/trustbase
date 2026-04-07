@@ -32,6 +32,12 @@ type ContributionRow = {
   created_at: Date
 }
 
+type RelatedMemberRow = {
+  id: string
+  display_name: string | null
+  identity_level: number
+}
+
 export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) {
   const { id } = await params
   const { user, member } = await getCurrentUserWithMember()
@@ -91,14 +97,16 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
     ])
   )
 
-  const relatedMembers = relatedMemberIds.length
+  const relatedMembers: RelatedMemberRow[] = relatedMemberIds.length
     ? await prisma.member.findMany({
         where: { id: { in: relatedMemberIds } },
         select: { id: true, display_name: true, identity_level: true },
       })
     : []
 
-  const memberMap = new Map(relatedMembers.map((row) => [row.id, row]))
+  const memberMap = new Map<string, RelatedMemberRow>(
+    relatedMembers.map((row: RelatedMemberRow) => [row.id, row])
+  )
 
   const chamaMemberList = memberRows.map((row) => {
     const relatedMember = memberMap.get(row.member_id)
