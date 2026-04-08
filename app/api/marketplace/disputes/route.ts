@@ -1,7 +1,7 @@
 // app/api/marketplace/disputes/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { resolveDispute } from '@/lib/cohere'
+import { resolveDispute, type DisputeResolution } from '@/lib/cohere'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   ])
 
   // Call Cohere for AI resolution recommendation
-  let cohereResult: any = null
+  let cohereResult: DisputeResolution | null = null
   try {
     cohereResult = await resolveDispute({
       orderDetails: `Listing: ${listing?.title || 'Unknown listing'}. Amount: KES ${order.amount.toNumber()}. Status: ${order.status}. Payment ref: ${order.paystack_reference || 'N/A'}`,

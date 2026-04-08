@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import { ShoppingCart, AlertCircle, ArrowLeft, Star } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import BuyButton from '@/components/marketplace/BuyButton'
 import DisputeButton from '@/components/marketplace/DisputeButton'
@@ -75,7 +76,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
         {/* Image */}
         <div className="aspect-video bg-earth-50 flex items-center justify-center relative">
           {imgUrl
-            ? <img src={imgUrl} alt={listing.title} className="w-full h-full object-cover" />
+            ? <Image src={imgUrl} alt={listing.title} fill sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />
             : <span className="text-6xl">{CATEGORY_EMOJI[listing.category || 'other'] || '📦'}</span>
           }
           <span className="absolute top-3 left-3 badge bg-white/90 text-earth-700 shadow-sm">

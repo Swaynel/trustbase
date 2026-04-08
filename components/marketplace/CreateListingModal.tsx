@@ -1,5 +1,6 @@
 'use client'
 // components/marketplace/CreateListingModal.tsx
+import Image from 'next/image'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Upload, Loader2, Sparkles } from 'lucide-react'
@@ -35,7 +36,7 @@ export default function CreateListingModal() {
       const upData = await upRes.json()
       setCloudinaryId(upData.public_id)
       setPreviewUrl(upData.secure_url)
-    } catch (e) {
+    } catch {
       setError('Image upload failed. Please try again.')
     }
     setUploading(false)
@@ -61,7 +62,7 @@ export default function CreateListingModal() {
       setForm({ title: '', description: '', price: '' })
       setCloudinaryId(''); setPreviewUrl('')
       router.refresh()
-    } catch (e) {
+    } catch {
       setError('Failed to create listing.')
     }
     setLoading(false)
@@ -96,7 +97,7 @@ export default function CreateListingModal() {
                     ${previewUrl ? 'border-earth-300' : 'border-earth-200 hover:border-earth-400 bg-earth-50'}`}
                 >
                   {previewUrl
-                    ? <img src={previewUrl} className="h-full w-full object-cover rounded-xl" />
+                    ? <Image src={previewUrl} alt="Listing preview" fill sizes="(max-width: 768px) 100vw, 448px" className="object-cover rounded-xl" />
                     : uploading
                       ? <Loader2 className="w-8 h-8 text-earth-400 animate-spin" />
                       : <div className="text-center"><Upload className="w-6 h-6 text-earth-400 mx-auto mb-1" /><p className="text-xs text-earth-400">Upload photo</p></div>

@@ -1,5 +1,5 @@
 // app/api/cohere/credit-narrative/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateCreditNarrative } from '@/lib/cohere'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
@@ -8,7 +8,7 @@ type StatusRow = {
   status: string
 }
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

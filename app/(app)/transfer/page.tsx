@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ArrowLeftRight, Clock, CheckCircle2, Lock } from 'lucide-react'
+import { ArrowLeftRight, Lock } from 'lucide-react'
 import AcceptAgentButton from '@/components/transfer/AcceptAgentButton'
 import NewTransferForm from '@/components/transfer/NewTransferForm'
 
@@ -37,6 +37,7 @@ type SerializedTransfer = Omit<TransferRequestRow, 'amount' | 'created_at' | 'ex
   amount: number
   created_at: string
   expires_at: string
+  expires_in_hours?: number
   members: { display_name: string } | null
 }
 
@@ -97,6 +98,7 @@ export default async function TransferPage() {
   const relatedMemberMap = new Map<string, string>(
     relatedMembers.map((row: RelatedMemberRow) => [row.id, row.display_name || 'Member'])
   )
+  const now = new Date()
 
   const myTransfers: SerializedTransfer[] = myTransferRows.map((transfer: TransferRequestRow) => ({
     ...transfer,
@@ -113,6 +115,7 @@ export default async function TransferPage() {
     amount: decimalToNumber(transfer.amount),
     created_at: transfer.created_at.toISOString(),
     expires_at: transfer.expires_at.toISOString(),
+    expires_in_hours: Math.ceil((new Date(transfer.expires_at).getTime() - now.getTime()) / 3600000),
     members: { display_name: relatedMemberMap.get(transfer.sender_id) || 'Member' },
   }))
 
@@ -206,7 +209,6 @@ export default async function TransferPage() {
 }
 
 function AgentRequestCard({ transfer, agentId }: { transfer: SerializedTransfer; agentId: string }) {
-  const expiresIn = Math.ceil((new Date(transfer.expires_at).getTime() - Date.now()) / 3600000)
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl border border-earth-200 bg-earth-50">
       <div className="flex-1">
@@ -214,7 +216,7 @@ function AgentRequestCard({ transfer, agentId }: { transfer: SerializedTransfer;
           {transfer.members?.display_name || 'Member'} wants to send KES {transfer.amount.toLocaleString()}
         </p>
         <p className="text-xs text-earth-500 mt-0.5">
-          To: {transfer.destination_city} · Expires in {expiresIn}h
+          To: {transfer.destination_city} · Expires in {transfer.expires_in_hours ?? 0}h
         </p>
       </div>
       <AcceptAgentButton transferId={transfer.id} agentId={agentId} />

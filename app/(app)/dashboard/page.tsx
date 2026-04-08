@@ -5,7 +5,7 @@ import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Shield, TrendingUp, Users, ShoppingBag,
+  TrendingUp, Users, ShoppingBag,
   Landmark, Vote, ArrowRight, Zap, Star
 } from 'lucide-react'
 import IdentityCard from '@/components/identity/IdentityCard'
@@ -128,8 +128,9 @@ export default async function DashboardPage() {
       contribution_amount: decimalToNumber(chama.contribution_amount),
     }))
 
+  const now = new Date()
   const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
-  const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86400000)
+  const daysSince = Math.floor((now.getTime() - new Date(member.created_at).getTime()) / 86400000)
 
   return (
     <div className="space-y-6">

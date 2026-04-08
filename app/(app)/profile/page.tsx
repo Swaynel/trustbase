@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber, dateToISOString } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { UserCircle, Download, Star, Shield, Calendar, Hash } from 'lucide-react'
+import { Star, Shield, Calendar, Hash } from 'lucide-react'
 import CreditNarrativeSection from '@/components/identity/CreditNarrativeSection'
 import OriginCorroborate from '@/components/identity/OriginCorroborate'
+import LanguageSetting from '@/components/profile/LanguageSetting'
 
 const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
 const LANG_NAMES: Record<string, string> = { en: 'English', sw: 'Swahili', fr: 'Français', ar: 'العربية' }
@@ -50,7 +51,8 @@ export default async function ProfilePage() {
   const repaidLoans = loanStats.filter((loan: LoanStatRow) => loan.status === 'repaid').length
   const totalLoans = loanStats.length
   const repayRate = totalLoans > 0 ? Math.round((repaidLoans / totalLoans) * 100) : 100
-  const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86400000)
+  const now = new Date()
+  const daysSince = Math.floor((now.getTime() - new Date(member.created_at).getTime()) / 86400000)
 
   const successContribs = contribs.filter((contribution: ContributionStatRow) => contribution.status === 'success').length
   const totalContribs = contribs.length
@@ -203,6 +205,3 @@ function PillarRow({ name, desc, done, detail }: {
     </div>
   )
 }
-
-// Language setting (client component inlined for simplicity)
-import LanguageSetting from '@/components/profile/LanguageSetting'

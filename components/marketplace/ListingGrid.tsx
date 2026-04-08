@@ -1,7 +1,7 @@
 'use client'
 // components/marketplace/ListingGrid.tsx
+import Image from 'next/image'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ShoppingBag, ShoppingCart, Loader2 } from 'lucide-react'
 import { getListingUrl } from '@/lib/cloudinary'
 
@@ -44,7 +44,6 @@ export default function ListingGrid({ listings, currentMemberId }: {
 }
 
 function ListingCard({ listing: l, isOwner }: { listing: Listing; isOwner: boolean }) {
-  const router = useRouter()
   const [ordering, setOrdering] = useState(false)
 
   async function handleBuy() {
@@ -78,7 +77,7 @@ function ListingCard({ listing: l, isOwner }: { listing: Listing; isOwner: boole
       {/* Image */}
       <div className="aspect-[4/3] bg-earth-50 flex items-center justify-center relative">
         {imgUrl ? (
-          <img src={imgUrl} alt={l.title} className="w-full h-full object-cover" />
+          <Image src={imgUrl} alt={l.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" />
         ) : (
           <span className="text-4xl">{CATEGORY_EMOJI[l.category] || '📦'}</span>
         )}

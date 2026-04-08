@@ -1,10 +1,10 @@
 // app/api/identity/explain/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { explainIdentity } from '@/lib/cohere'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

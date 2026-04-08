@@ -1,13 +1,9 @@
 'use client'
 // components/chama/ContributeButton.tsx
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { TrendingUp, Loader2 } from 'lucide-react'
 
-declare global { interface Window { PaystackPop: any } }
-
 export default function ContributeButton({ chamaId, amount }: { chamaId: string; amount: number }) {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function handleContribute() {

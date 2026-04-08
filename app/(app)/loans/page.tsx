@@ -159,6 +159,8 @@ export default async function LoansPage() {
     }
   })
 
+  const now = new Date()
+
   return (
     <div className="space-y-6">
       <div>
@@ -196,7 +198,7 @@ export default async function LoansPage() {
                   </div>
                   <span className="text-xs text-earth-500">Stake: {g.stake_score} rep pts</span>
                 </div>
-                {g.loans && <GuaranteeAction guaranteeId={g.id} loanId={g.loans.id} />}
+                {g.loans && <GuaranteeAction loanId={g.loans.id} />}
               </div>
             ))}
           </div>
@@ -218,7 +220,7 @@ export default async function LoansPage() {
               const s = STATUS_CONFIG[loan.status] || STATUS_CONFIG.requested
               const dueAt = loan.due_at
               const daysLeft = dueAt
-                ? Math.ceil((new Date(dueAt).getTime() - Date.now()) / 86400000)
+                ? Math.ceil((new Date(dueAt).getTime() - now.getTime()) / 86400000)
                 : null
               return (
                 <div key={loan.id} className="card">

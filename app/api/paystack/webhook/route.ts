@@ -9,6 +9,12 @@ type GuaranteeRow = {
   stake_score: { toNumber(): number }
 }
 
+type ChamaPayoutTx = {
+  chamaMember: Pick<typeof prisma.chamaMember, 'update' | 'count'>
+  chama: Pick<typeof prisma.chama, 'update'>
+  transaction: Pick<typeof prisma.transaction, 'create'>
+}
+
 async function processLoanRepayment(loanId: string) {
   const guarantees: GuaranteeRow[] = await prisma.guarantee.findMany({
     where: {
@@ -66,7 +72,7 @@ export async function POST(req: NextRequest) {
   // ── CHARGE SUCCESS ───────────────────────────────────────────────────────
   if (event.event === 'charge.success') {
     const { reference, metadata } = event.data
-    const { type, memberId, chamaId, listingId, orderId } = metadata || {}
+    const { type, memberId, chamaId, orderId } = metadata || {}
 
     // Verify independently
     const verification = await verifyTransaction(reference)
@@ -156,7 +162,7 @@ export async function POST(req: NextRequest) {
     const amount = event.data.amount / 100
 
     if (type === 'chama_payout' && chamaId && memberId) {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: ChamaPayoutTx) => {
         await tx.chamaMember.update({
           where: {
             chama_id_member_id: {

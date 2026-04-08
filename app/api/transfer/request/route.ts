@@ -16,6 +16,12 @@ type TransferRow = {
   created_at: Date
 }
 
+type RequestTransferTx = {
+  member: Pick<typeof prisma.member, 'updateMany'>
+  transferRequest: Pick<typeof prisma.transferRequest, 'create'>
+  transaction: Pick<typeof prisma.transaction, 'create'>
+}
+
 function serializeTransfer(transfer: TransferRow) {
   return {
     ...transfer,
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
   let transfer
 
   try {
-    transfer = await prisma.$transaction(async (tx) => {
+    transfer = await prisma.$transaction(async (tx: RequestTransferTx) => {
       const debitedMember = await tx.member.updateMany({
         where: {
           id: member.id,
@@ -107,7 +113,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ transfer: serializeTransfer(transfer), message })
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

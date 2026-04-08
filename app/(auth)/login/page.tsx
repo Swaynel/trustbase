@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation'
 
 type Step = 'phone' | 'otp' | 'profile'
 
+type MemberStatusResponse = {
+  error?: string
+  hasMemberProfile?: boolean
+}
+
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'sw', label: 'Kiswahili' },
@@ -34,20 +39,24 @@ function isValidE164Phone(phone: string) {
   return /^\+[1-9]\d{7,14}$/.test(phone)
 }
 
-async function parseJsonResponse(res: Response) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong.'
+}
+
+async function parseJsonResponse<T extends Record<string, unknown>>(res: Response): Promise<T> {
   const text = await res.text()
 
-  if (!text) return {}
+  if (!text) return {} as T
 
   try {
-    return JSON.parse(text) as Record<string, unknown>
+    return JSON.parse(text) as T
   } catch {
     throw new Error(`Server returned an unexpected ${res.headers.get('content-type') || 'response'} (${res.status}). Check the dev server log for the route error.`)
   }
 }
 
 export default function LoginPage() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const router = useRouter()
   const [step, setStep] = useState<Step>('phone')
   const [phone, setPhone] = useState('')
@@ -67,7 +76,7 @@ export default function LoginPage() {
 
       if (cancelled) return
       const res = await fetch('/api/auth/member-status', { cache: 'no-store' })
-      const payload = await parseJsonResponse(res)
+      const payload = await parseJsonResponse<MemberStatusResponse>(res)
 
       if (!res.ok) {
         setError(String(payload.error || 'Could not load your profile state'))
@@ -88,7 +97,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, supabase])
 
   async function handleSendOTP() {
     setLoading(true); setError('')
@@ -102,8 +111,8 @@ export default function LoginPage() {
       if (error) throw error
       setPhone(normalizedPhone)
       setStep('otp')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (error) {
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -117,7 +126,7 @@ export default function LoginPage() {
         throw new Error('Enter a valid phone number before verifying.')
       }
 
-      const { data, error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.verifyOtp({
         phone: normalizedPhone,
         token: otp.trim(),
         type: 'sms',
@@ -126,7 +135,7 @@ export default function LoginPage() {
       setPhone(normalizedPhone)
 
       const statusRes = await fetch('/api/auth/member-status', { cache: 'no-store' })
-      const statusPayload = await parseJsonResponse(statusRes)
+      const statusPayload = await parseJsonResponse<MemberStatusResponse>(statusRes)
       if (!statusRes.ok) {
         throw new Error(String(statusPayload.error || 'Could not load your profile state'))
       }
@@ -136,8 +145,8 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-    } catch (e: any) {
-      setError(e.message)
+    } catch (error) {
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -168,12 +177,12 @@ export default function LoginPage() {
         }),
       })
 
-      const payload = await parseJsonResponse(res)
+      const payload = await parseJsonResponse<{ error?: string }>(res)
       if (!res.ok) throw new Error(String(payload.error || 'Could not create profile'))
 
       router.push('/dashboard')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (error) {
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

@@ -38,9 +38,6 @@ export async function POST(req: NextRequest) {
 
   const phoneHash = hashPhone(phoneNumber)
 
-  const inputs = text ? text.split('*') : []
-  const lastInput = inputs[inputs.length - 1] || ''
-
   // Find member by phone hash
   const member = await prisma.member.findUnique({
     where: { phone_hash: phoneHash },

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import { Users, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
+import { Users, CheckCircle2 } from 'lucide-react'
 import ContributeButton from '@/components/chama/ContributeButton'
 import RequestLoanButton from '@/components/loans/RequestLoanButton'
 
@@ -129,8 +129,9 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
   }))
 
   const isMember = !!membership
+  const now = new Date()
   const cycleProgress = chama.current_cycle_end
-    ? Math.min(100, Math.floor((Date.now() - new Date(chama.created_at).getTime()) /
+    ? Math.min(100, Math.floor((now.getTime() - new Date(chama.created_at).getTime()) /
         (chama.cycle_days * 86400000) * 100))
     : 0
 

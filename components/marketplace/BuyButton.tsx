@@ -2,12 +2,10 @@
 // components/marketplace/BuyButton.tsx
 import { useState } from 'react'
 import { ShoppingCart, Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 export default function BuyButton({ listing }: {
   listing: { id: string; price: number; title: string }
 }) {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 

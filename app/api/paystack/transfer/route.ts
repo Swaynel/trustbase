@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
       reference: reference || `tb_manual_${Date.now()}`,
     })
     return NextResponse.json({ transfer: result.data })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not initiate transfer'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

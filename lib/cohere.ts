@@ -143,6 +143,13 @@ export async function classifyListing(title: string, description: string) {
 }
 
 // ─── DISPUTE RESOLUTION ──────────────────────────────────────────────────────
+export type DisputeResolution = {
+  summary: string
+  key_discrepancy: string
+  recommendation: 'refund_buyer' | 'release_to_seller' | 'partial_refund' | 'escalate'
+  confidence: number
+}
+
 export async function resolveDispute({
   orderDetails,
   buyerLevel,
@@ -153,7 +160,7 @@ export async function resolveDispute({
   buyerLevel: number
   sellerLevel: number
   description: string
-}) {
+}): Promise<DisputeResolution> {
   const message = `
 Order: ${orderDetails}
 Buyer identity level: ${buyerLevel}/4
@@ -171,7 +178,20 @@ summary, key_discrepancy, recommendation (one of: refund_buyer|release_to_seller
   })
 
   try {
-    return JSON.parse(text.replace(/```json|```/g, '').trim())
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim()) as Partial<DisputeResolution>
+
+    return {
+      summary: typeof parsed.summary === 'string' ? parsed.summary : text,
+      key_discrepancy: typeof parsed.key_discrepancy === 'string' ? parsed.key_discrepancy : 'Unavailable',
+      recommendation:
+        parsed.recommendation === 'refund_buyer' ||
+        parsed.recommendation === 'release_to_seller' ||
+        parsed.recommendation === 'partial_refund' ||
+        parsed.recommendation === 'escalate'
+          ? parsed.recommendation
+          : 'escalate',
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+    }
   } catch {
     return { summary: text, recommendation: 'escalate', confidence: 0.5, key_discrepancy: 'Parse error' }
   }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 
-export default function GuaranteeAction({ guaranteeId, loanId }: { guaranteeId: string; loanId: string }) {
+export default function GuaranteeAction({ loanId }: { loanId: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState<'accept' | 'decline' | null>(null)
 

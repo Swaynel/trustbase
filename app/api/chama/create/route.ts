@@ -3,6 +3,11 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber, dateToISOString } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 
+type CreateChamaTx = {
+  chama: Pick<typeof prisma.chama, 'create'>
+  chamaMember: Pick<typeof prisma.chamaMember, 'create'>
+}
+
 export async function POST(req: NextRequest) {
   const { user, member } = await getCurrentUserWithMember()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -30,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cycle days must be greater than zero' }, { status: 400 })
   }
 
-  const chama = await prisma.$transaction(async (tx) => {
+  const chama = await prisma.$transaction(async (tx: CreateChamaTx) => {
     const created = await tx.chama.create({
       data: {
         name,

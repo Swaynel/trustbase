@@ -43,7 +43,7 @@ export default function RequestLoanButton({
       if (!res.ok) { setError(data.error); setLoading(false); return }
       setOpen(false)
       router.refresh()
-    } catch (e) {
+    } catch {
       setError('Request failed. Please try again.')
     }
     setLoading(false)

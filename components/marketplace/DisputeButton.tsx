@@ -2,14 +2,28 @@
 // components/marketplace/DisputeButton.tsx
 import { useState } from 'react'
 import { AlertCircle, X, Loader2, Send } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+
+type DisputeRecommendation = {
+  summary: string
+  recommendation: string
+  confidence: number
+}
+
+type DisputeResponse = {
+  dispute: {
+    id: string
+    created_at: string
+    cohere_confidence: number | null
+  }
+  aiRecommendation: DisputeRecommendation | null
+  message: string
+}
 
 export default function DisputeButton({ orderId }: { orderId: string }) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [description, setDescription] = useState('')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<DisputeResponse | null>(null)
   const [error, setError] = useState('')
 
   async function handleDispute() {
@@ -20,9 +34,9 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, description }),
       })
-      const data = await res.json()
+      const data = await res.json() as ({ error?: string } & Partial<DisputeResponse>)
       if (!res.ok) { setError(data.error || 'Failed to raise dispute'); setLoading(false); return }
-      setResult(data)
+      setResult(data as DisputeResponse)
     } catch {
       setError('Something went wrong.')
     }
@@ -88,13 +102,13 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-earth-50">
                     <p className="text-xs font-medium text-earth-600 mb-1">AI Summary</p>
-                    <p className="text-sm text-ink-800">{result.cohereResult?.summary || 'Dispute logged.'}</p>
+                    <p className="text-sm text-ink-800">{result.aiRecommendation?.summary || result.message || 'Dispute logged.'}</p>
                   </div>
-                  {result.cohereResult?.recommendation && (
-                    <div className={`p-3 rounded-xl text-sm font-medium ${RECOMMENDATION_LABELS[result.cohereResult.recommendation]?.color || 'text-earth-700 bg-earth-50'}`}>
-                      {RECOMMENDATION_LABELS[result.cohereResult.recommendation]?.label || result.cohereResult.recommendation}
-                      {result.cohereResult.confidence && (
-                        <span className="ml-2 opacity-60 text-xs">({Math.round(result.cohereResult.confidence * 100)}% confidence)</span>
+                  {result.aiRecommendation?.recommendation && (
+                    <div className={`p-3 rounded-xl text-sm font-medium ${RECOMMENDATION_LABELS[result.aiRecommendation.recommendation]?.color || 'text-earth-700 bg-earth-50'}`}>
+                      {RECOMMENDATION_LABELS[result.aiRecommendation.recommendation]?.label || result.aiRecommendation.recommendation}
+                      {result.aiRecommendation.confidence && (
+                        <span className="ml-2 opacity-60 text-xs">({Math.round(result.aiRecommendation.confidence * 100)}% confidence)</span>
                       )}
                     </div>
                   )}

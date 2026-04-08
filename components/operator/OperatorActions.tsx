@@ -1,7 +1,7 @@
 'use client'
-// components/operator/OperatorActions.tsx
-import { useState, useEffect } from 'react'
-import { UserPlus, TrendingUp, ArrowRightLeft, Loader2, CheckCircle2, Upload } from 'lucide-react'
+
+import { useEffect, useEffectEvent, useState } from 'react'
+import { ArrowRightLeft, CheckCircle2, Loader2, TrendingUp, Upload, UserPlus } from 'lucide-react'
 
 interface QueuedTx {
   id: string
@@ -15,23 +15,53 @@ interface QueuedTx {
 
 const QUEUE_KEY = 'tb_operator_queue'
 
+function readStoredQueue() {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const stored = localStorage.getItem(QUEUE_KEY)
+    return stored ? JSON.parse(stored) as QueuedTx[] : []
+  } catch {
+    return []
+  }
+}
+
+async function syncPendingQueue(queue: QueuedTx[], operatorId: string) {
+  const pending = queue.filter((tx) => !tx.synced)
+  if (!pending.length) return null
+
+  const results = await Promise.allSettled(
+    pending.map((tx) =>
+      fetch('/api/chama/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...tx, operatorId }),
+      })
+    )
+  )
+
+  return queue.map((tx) => {
+    const idx = pending.findIndex((pendingTx) => pendingTx.id === tx.id)
+    if (idx >= 0 && results[idx].status === 'fulfilled') {
+      return { ...tx, synced: true }
+    }
+
+    return tx
+  })
+}
+
 export default function OperatorActions({ operatorId }: { operatorId: string }) {
-  const [queue, setQueue] = useState<QueuedTx[]>([])
+  const [queue, setQueue] = useState<QueuedTx[]>(readStoredQueue)
   const [activeTab, setActiveTab] = useState<'contribute' | 'onboard' | 'transfer'>('contribute')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ memberId: '', amount: '', chamaId: '', phone: '', name: '' })
 
-  // Load queue from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(QUEUE_KEY)
-      if (stored) setQueue(JSON.parse(stored))
-    } catch {}
-  }, [])
+  function saveQueue(nextQueue: QueuedTx[]) {
+    setQueue(nextQueue)
 
-  function saveQueue(q: QueuedTx[]) {
-    setQueue(q)
-    try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)) } catch {}
+    try {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(nextQueue))
+    } catch {}
   }
 
   function enqueue(tx: Omit<QueuedTx, 'id' | 'timestamp' | 'synced'>) {
@@ -39,44 +69,40 @@ export default function OperatorActions({ operatorId }: { operatorId: string }) 
     saveQueue([newTx, ...queue])
   }
 
-  async function syncQueue() {
-    const pending = queue.filter(t => !t.synced)
-    if (!pending.length) return
+  const syncQueue = useEffectEvent(async () => {
     setLoading(true)
+    try {
+      const updatedQueue = await syncPendingQueue(queue, operatorId)
+      if (updatedQueue) saveQueue(updatedQueue)
+    } finally {
+      setLoading(false)
+    }
+  })
 
-    const results = await Promise.allSettled(
-      pending.map(tx =>
-        fetch('/api/chama/contribute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...tx, operatorId }),
-        })
-      )
-    )
-
-    const updatedQueue = queue.map((tx, i) => {
-      const idx = pending.findIndex(p => p.id === tx.id)
-      if (idx >= 0 && results[idx].status === 'fulfilled') {
-        return { ...tx, synced: true }
-      }
-      return tx
-    })
-
-    saveQueue(updatedQueue)
-    setLoading(false)
+  async function handleSyncNow() {
+    setLoading(true)
+    try {
+      const updatedQueue = await syncPendingQueue(queue, operatorId)
+      if (updatedQueue) saveQueue(updatedQueue)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Auto-sync when online
   useEffect(() => {
     function trySync() {
-      if (navigator.onLine && queue.some(t => !t.synced)) syncQueue()
+      if (navigator.onLine && queue.some((tx) => !tx.synced)) {
+        void syncQueue()
+      }
     }
+
     window.addEventListener('online', trySync)
     return () => window.removeEventListener('online', trySync)
   }, [queue])
 
   async function handleContribute() {
     if (!form.memberId || !form.amount || !form.chamaId) return
+
     if (navigator.onLine) {
       setLoading(true)
       try {
@@ -93,18 +119,24 @@ export default function OperatorActions({ operatorId }: { operatorId: string }) 
       } catch {}
       setLoading(false)
     } else {
-      enqueue({ type: 'contribution', memberId: form.memberId, amount: Number(form.amount), chamaId: form.chamaId })
+      enqueue({
+        type: 'contribution',
+        memberId: form.memberId,
+        amount: Number(form.amount),
+        chamaId: form.chamaId,
+      })
     }
-    setForm(f => ({ ...f, memberId: '', amount: '' }))
+
+    setForm((currentForm) => ({ ...currentForm, memberId: '', amount: '' }))
   }
 
-  const unsyncedCount = queue.filter(t => !t.synced).length
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine
+  const unsyncedCount = queue.filter((tx) => !tx.synced).length
 
   return (
     <div>
-      {/* Tabs */}
       <div className="flex gap-2 mb-4">
-        {(['contribute', 'onboard', 'transfer'] as const).map(tab => (
+        {(['contribute', 'onboard', 'transfer'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -116,31 +148,29 @@ export default function OperatorActions({ operatorId }: { operatorId: string }) 
         ))}
       </div>
 
-      {/* Contribute */}
       {activeTab === 'contribute' && (
         <div className="space-y-3">
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            placeholder="Member ID" value={form.memberId} onChange={e => setForm(f => ({ ...f, memberId: e.target.value }))} />
+            placeholder="Member ID" value={form.memberId} onChange={(e) => setForm((currentForm) => ({ ...currentForm, memberId: e.target.value }))} />
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            placeholder="Chama ID" value={form.chamaId} onChange={e => setForm(f => ({ ...f, chamaId: e.target.value }))} />
+            placeholder="Chama ID" value={form.chamaId} onChange={(e) => setForm((currentForm) => ({ ...currentForm, chamaId: e.target.value }))} />
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            type="number" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+            type="number" placeholder="Amount (KES)" value={form.amount} onChange={(e) => setForm((currentForm) => ({ ...currentForm, amount: e.target.value }))} />
           <button onClick={handleContribute} disabled={loading || !form.memberId || !form.amount}
             className="w-full py-3 rounded-xl bg-earth-500 hover:bg-earth-600 text-white text-sm font-medium flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-            {navigator.onLine ? 'Record contribution' : 'Queue contribution (offline)'}
+            {isOnline ? 'Record contribution' : 'Queue contribution (offline)'}
           </button>
         </div>
       )}
 
-      {/* Onboard */}
       {activeTab === 'onboard' && (
         <div className="space-y-3">
           <p className="text-xs text-earth-400">Register a new member on their behalf</p>
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            placeholder="Member name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            placeholder="Member name" value={form.name} onChange={(e) => setForm((currentForm) => ({ ...currentForm, name: e.target.value }))} />
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            placeholder="Phone number" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            placeholder="Phone number" value={form.phone} onChange={(e) => setForm((currentForm) => ({ ...currentForm, phone: e.target.value }))} />
           <p className="text-xs text-earth-500">Member will receive SMS to complete registration</p>
           <button className="w-full py-3 rounded-xl bg-earth-500 hover:bg-earth-600 text-white text-sm font-medium flex items-center justify-center gap-2">
             <UserPlus className="w-4 h-4" /> Onboard member
@@ -148,29 +178,27 @@ export default function OperatorActions({ operatorId }: { operatorId: string }) 
         </div>
       )}
 
-      {/* Transfer */}
       {activeTab === 'transfer' && (
         <div className="space-y-3">
           <p className="text-xs text-earth-400">Facilitate a cross-city value transfer</p>
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            placeholder="Sender member ID" value={form.memberId} onChange={e => setForm(f => ({ ...f, memberId: e.target.value }))} />
+            placeholder="Sender member ID" value={form.memberId} onChange={(e) => setForm((currentForm) => ({ ...currentForm, memberId: e.target.value }))} />
           <input className="w-full bg-earth-800 border border-earth-700 rounded-xl px-4 py-3 text-sm text-white placeholder-earth-500 focus:outline-none focus:border-earth-500"
-            type="number" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+            type="number" placeholder="Amount (KES)" value={form.amount} onChange={(e) => setForm((currentForm) => ({ ...currentForm, amount: e.target.value }))} />
           <button className="w-full py-3 rounded-xl bg-earth-500 hover:bg-earth-600 text-white text-sm font-medium flex items-center justify-center gap-2">
             <ArrowRightLeft className="w-4 h-4" /> Initiate transfer
           </button>
         </div>
       )}
 
-      {/* Offline queue */}
       {queue.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-earth-400">
               Queued transactions ({unsyncedCount} pending)
             </p>
-            {unsyncedCount > 0 && navigator.onLine && (
-              <button onClick={syncQueue} disabled={loading}
+            {unsyncedCount > 0 && isOnline && (
+              <button onClick={() => void handleSyncNow()} disabled={loading}
                 className="text-xs text-earth-400 hover:text-earth-300 flex items-center gap-1">
                 {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 Sync now
@@ -178,7 +206,7 @@ export default function OperatorActions({ operatorId }: { operatorId: string }) 
             )}
           </div>
           <div className="space-y-1.5">
-            {queue.slice(0, 5).map(tx => (
+            {queue.slice(0, 5).map((tx) => (
               <div key={tx.id} className="flex items-center gap-2 text-xs text-earth-400">
                 {tx.synced
                   ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />

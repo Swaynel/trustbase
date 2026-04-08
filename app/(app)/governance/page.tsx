@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Vote, Plus, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Vote, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import VoteButton from '@/components/governance/VoteButton'
 import CreateProposalModal from '@/components/governance/CreateProposalModal'
 
@@ -82,6 +82,7 @@ export default async function GovernancePage() {
 
   const WEIGHT = member.identity_level === 4 ? 3 : member.identity_level
   const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
+  const now = new Date()
 
   return (
     <div className="space-y-6">
@@ -142,7 +143,7 @@ export default async function GovernancePage() {
               const total = v.yes_weight + v.no_weight
               const yesPct = total > 0 ? Math.round((v.yes_weight / total) * 100) : 50
               const noPct = 100 - yesPct
-              const closesIn = Math.ceil((new Date(v.window_closes_at).getTime() - Date.now()) / 86400000)
+              const closesIn = Math.ceil((new Date(v.window_closes_at).getTime() - now.getTime()) / 86400000)
               const hasVoted = myVoteIds.has(v.id)
 
               return (

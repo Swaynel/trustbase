@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ShoppingBag, Plus, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import SearchBar from '@/components/marketplace/SearchBar'
 import ListingGrid from '@/components/marketplace/ListingGrid'
 import CreateListingModal from '@/components/marketplace/CreateListingModal'
@@ -32,6 +32,22 @@ type SellerRow = {
   display_name: string | null
 }
 
+type MarketplaceListing = {
+  id: string
+  title: string
+  description: string
+  category: string
+  price: number
+  cloudinary_public_id: string | null
+  seller_id: string
+  created_at: string
+  members: { display_name: string; identity_level?: number } | null
+}
+
+type SearchResponse = {
+  listings?: MarketplaceListing[]
+}
+
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
   const resolvedSearchParams = await searchParams
   const { user, member } = await getCurrentUserWithMember()
@@ -56,7 +72,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
   }
 
   // Fetch listings — if search query, use semantic search endpoint
-  let listings: any[] = []
+  let listings: MarketplaceListing[] = []
   const query = resolvedSearchParams.q?.trim()
   const category = resolvedSearchParams.category && resolvedSearchParams.category !== 'all'
     ? resolvedSearchParams.category
@@ -68,7 +84,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
         `${process.env.NEXT_PUBLIC_APP_URL}/api/marketplace/search?q=${encodeURIComponent(query)}`,
         { cache: 'no-store' }
       )
-      const data = await res.json()
+      const data = await res.json() as SearchResponse
       listings = data.listings || []
     } catch {
       // fallback to regular query
@@ -149,7 +165,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
       {/* Results */}
       {query && (
         <p className="text-sm text-earth-500">
-          {listings.length} result{listings.length !== 1 ? 's' : ''} for "{query}"
+          {listings.length} result{listings.length !== 1 ? 's' : ''} for &quot;{query}&quot;
           {listings.length > 0 && <span className="ml-1 text-earth-400">(AI semantic search)</span>}
         </p>
       )}
