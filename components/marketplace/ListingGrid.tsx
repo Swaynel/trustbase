@@ -11,10 +11,10 @@ interface Listing {
   description: string
   category: string
   price: number
-  cloudinary_public_id?: string
+  cloudinary_public_id?: string | null
   seller_id: string
   created_at: string
-  members?: { display_name: string }
+  members?: { display_name: string } | null
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
