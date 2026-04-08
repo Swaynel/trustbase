@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const sellerIds = Array.from(new Set(rows.map((row) => row.seller_id)))
+    const sellerIds = Array.from(new Set(rows.map((row: (typeof rows)[number]) => row.seller_id)))
     const sellers: SellerRow[] = sellerIds.length
       ? await prisma.member.findMany({
           where: { id: { in: sellerIds } },
