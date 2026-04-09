@@ -86,7 +86,7 @@ function NavContent({
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const active = pathname.startsWith(item.href)
           const locked = level < item.minLevel
@@ -149,7 +149,7 @@ export default function AppNav({ member }: { member: Member }) {
 
   return (
     <>
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-64 bg-white border-r border-earth-200 z-30">
+      <aside className="hidden md:flex md:sticky md:top-0 h-screen w-64 shrink-0 flex-col bg-white border-r border-earth-200">
         <NavContent
           member={member}
           level={level}
