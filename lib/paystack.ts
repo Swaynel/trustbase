@@ -4,7 +4,31 @@ import crypto from 'crypto'
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!
 const BASE = 'https://api.paystack.co'
 
-async function paystackFetch(path: string, opts: RequestInit = {}) {
+type PaystackResponse<T> = {
+  status: boolean
+  message: string
+  data: T
+}
+
+type PaystackInitializeData = {
+  authorization_url: string
+  access_code: string
+  reference: string
+}
+
+type PaystackVerifyData = {
+  amount: number
+  status: string
+}
+
+type PaystackRecipientData = {
+  recipient_code: string
+}
+
+type PaystackTransferData = Record<string, unknown>
+type PaystackCustomerData = Record<string, unknown>
+
+async function paystackFetch<T>(path: string, opts: RequestInit = {}): Promise<PaystackResponse<T>> {
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     headers: {
@@ -15,11 +39,11 @@ async function paystackFetch(path: string, opts: RequestInit = {}) {
   })
 
   const raw = await res.text()
-  let json: Record<string, unknown> | null = null
+  let json: PaystackResponse<T> | null = null
 
   if (raw) {
     try {
-      json = JSON.parse(raw) as Record<string, unknown>
+      json = JSON.parse(raw) as PaystackResponse<T>
     } catch {
       json = null
     }
@@ -61,7 +85,7 @@ export async function initializeCharge({
   metadata?: Record<string, unknown>
   callbackUrl?: string
 }) {
-  return paystackFetch('/transaction/initialize', {
+  return paystackFetch<PaystackInitializeData>('/transaction/initialize', {
     method: 'POST',
     body: JSON.stringify({
       email,
@@ -75,7 +99,7 @@ export async function initializeCharge({
 }
 
 export async function verifyTransaction(reference: string) {
-  return paystackFetch(`/transaction/verify/${reference}`)
+  return paystackFetch<PaystackVerifyData>(`/transaction/verify/${reference}`)
 }
 
 export async function createRecipient({
@@ -87,7 +111,7 @@ export async function createRecipient({
   phone: string
   bankCode?: string
 }) {
-  return paystackFetch('/transferrecipient', {
+  return paystackFetch<PaystackRecipientData>('/transferrecipient', {
     method: 'POST',
     body: JSON.stringify({
       type: 'mobile_money',
@@ -110,7 +134,7 @@ export async function initiateTransfer({
   reason: string
   reference?: string
 }) {
-  return paystackFetch('/transfer', {
+  return paystackFetch<PaystackTransferData>('/transfer', {
     method: 'POST',
     body: JSON.stringify({
       source: 'balance',
@@ -124,7 +148,7 @@ export async function initiateTransfer({
 }
 
 export async function createOrGetCustomer(email: string, phone: string) {
-  return paystackFetch('/customer', {
+  return paystackFetch<PaystackCustomerData>('/customer', {
     method: 'POST',
     body: JSON.stringify({ email, phone }),
   })
