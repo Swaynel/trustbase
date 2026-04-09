@@ -11,7 +11,6 @@ import {
 import IdentityCard from '@/components/identity/IdentityCard'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import RecentChamas from '@/components/dashboard/RecentChamas'
-
 type DecimalValue = Parameters<typeof decimalToNumber>[0]
 
 type TransactionRow = {

@@ -1,11 +1,52 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
-@config "../tailwind.config.js";
+
+@theme {
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  --color-earth-50: #fbf4e7;
+  --color-earth-100: #f7ebd8;
+  --color-earth-200: #edd0a8;
+  --color-earth-300: #d9b07a;
+  --color-earth-400: #c89051;
+  --color-earth-500: #c07030;
+  --color-earth-600: #a85a22;
+  --color-earth-700: #8d491b;
+  --color-earth-800: #6e3418;
+  --color-earth-900: #3f1d0b;
+
+  --color-sand-50: #fdf8f0;
+  --color-sand-100: #f0e6d3;
+
+  --color-ink-50: #f8f5f2;
+  --color-ink-100: #eee4db;
+  --color-ink-200: #d9c9bc;
+  --color-ink-300: #c1ab98;
+  --color-ink-400: #a58a75;
+  --color-ink-500: #866b58;
+  --color-ink-600: #695141;
+  --color-ink-700: #4e392d;
+  --color-ink-800: #322319;
+  --color-ink-900: #1a1208;
+
+  --color-forest-50: #eff8f0;
+  --color-forest-100: #d8ead9;
+  --color-forest-200: #b8d6bd;
+  --color-forest-300: #8fba98;
+  --color-forest-400: #5f9d68;
+  --color-forest-500: #3a7a4a;
+  --color-forest-600: #316443;
+  --color-forest-700: #295338;
+  --color-forest-800: #213f2d;
+  --color-forest-900: #183124;
+}
 
 :root {
-  --font-display: 'Playfair Display';
-  --font-body: 'DM Sans';
-  --font-mono: 'DM Mono';
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
 
   --color-primary: #c07030;
   --color-primary-dark: #a85a22;
@@ -24,7 +65,7 @@
 }
 
 html {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-body);
   background-color: var(--color-surface);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
@@ -75,6 +116,22 @@ html {
   background: linear-gradient(90deg, #f0e6d3 25%, #fdf8f0 50%, #f0e6d3 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.35s ease both;
+}
+
+.animate-fade-up-delay-1 {
+  animation: fadeUp 0.35s 0.05s ease both;
+}
+
+.animate-fade-up-delay-2 {
+  animation: fadeUp 0.35s 0.10s ease both;
 }
 
 /* ── CARD ── */

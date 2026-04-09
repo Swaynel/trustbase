@@ -1,8 +1,8 @@
 // lib/supabase/server.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import type { Member } from '@prisma/client'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import type { Member } from '@/generated/prisma'
 import { prisma } from '@/lib/prisma'
 import {
   getSupabasePublishableKey,

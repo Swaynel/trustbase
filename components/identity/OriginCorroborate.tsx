@@ -59,7 +59,7 @@ export default function OriginCorroborate({
       ) : (
         <div className="space-y-3">
           <p className="text-xs font-medium text-earth-600">Corroborate another member from {originCountry}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               className="input flex-1 text-sm"
               placeholder="Paste member ID to corroborate"
@@ -69,7 +69,7 @@ export default function OriginCorroborate({
             <button
               onClick={handleCorroborate}
               disabled={!memberId2.trim() || loading}
-              className="btn-primary flex items-center gap-2 flex-shrink-0"
+              className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 w-full sm:w-auto"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Corroborate

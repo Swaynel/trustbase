@@ -88,22 +88,29 @@ export default async function ProfilePage() {
         <p className="section-sub">Your TrustBase identity and financial passport</p>
       </div>
 
-      {/* Profile card */}
-      <div className="card">
-        <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-earth-500 flex items-center justify-center text-white text-2xl font-display">
-            {(member.display_name || '?').charAt(0).toUpperCase()}
-          </div>
+      <div className="card overflow-hidden">
+        <div className="border-b border-earth-100 bg-gradient-to-br from-earth-50 via-white to-sand-50 px-6 py-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-earth-500 flex items-center justify-center text-white text-2xl font-display shadow-sm">
+                {(member.display_name || '?').charAt(0).toUpperCase()}
+              </div>
 
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="font-display text-2xl text-ink-900">{member.display_name || 'Anonymous'}</h2>
-              <span className={`w-3 h-3 rounded-full level-${member.identity_level} flex-shrink-0`} />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <h2 className="font-display text-2xl text-ink-900">{member.display_name || 'Anonymous'}</h2>
+                  <span className={`w-3 h-3 rounded-full level-${member.identity_level} flex-shrink-0`} />
+                </div>
+                <p className="text-sm text-earth-500 mb-2">
+                  {LEVEL_NAMES[member.identity_level]} · {LANG_NAMES[member.language] || member.language}
+                </p>
+                <p className="text-sm text-earth-600 leading-relaxed max-w-xl">
+                  A living snapshot of your verified identity, community standing, and financial activity across TrustBase.
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-earth-500 mb-3">{LEVEL_NAMES[member.identity_level]} · {LANG_NAMES[member.language] || member.language}</p>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:w-[480px]">
               <MiniStat icon={<Shield className="w-3.5 h-3.5" />} label="Level" value={`${member.identity_level}/4`} />
               <MiniStat icon={<Star className="w-3.5 h-3.5" />} label="Reputation" value={`${Math.round(member.reputation_score)}/100`} />
               <MiniStat icon={<Calendar className="w-3.5 h-3.5" />} label="Days active" value={String(daysSince)} />
@@ -111,60 +118,67 @@ export default async function ProfilePage() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Identity pillars summary */}
-      <div className="card">
-        <h2 className="font-display text-lg text-ink-900 mb-4">Identity pillars</h2>
-        <div className="space-y-3">
-          <PillarRow
-            name="Origin Web"
-            desc="Community corroboration of your declared origin"
-            done={serializedPillars?.pillar_1_done}
-            detail={serializedPillars?.pillar_1_done ? 'Complete' : `${Math.round(serializedPillars?.pillar_1_score || 0)}% — need 3 corroborations`}
-          />
-          <PillarRow
-            name="Presence Pulse"
-            desc="30 days of consistent phone and financial activity"
-            done={serializedPillars?.pillar_2_done}
-            detail={serializedPillars?.pillar_2_done ? 'Complete' : `${serializedPillars?.p2_days_present || 0}/30 days`}
-          />
-          <PillarRow
-            name="Activity Threads"
-            desc="5 distinct financial transactions with different members"
-            done={serializedPillars?.pillar_3_done}
-            detail={serializedPillars?.pillar_3_done ? 'Complete' : `${serializedPillars?.p3_threads || 0}/5 partners`}
-          />
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-display text-lg text-ink-900">Identity pillars</h2>
+              <p className="text-xs text-earth-500">Signals used to strengthen trust across the network</p>
+            </div>
+            <span className="badge bg-earth-100 text-earth-700">Level {member.identity_level}/4</span>
+          </div>
+          <div className="space-y-3">
+            <PillarRow
+              name="Origin Web"
+              desc="Community corroboration of your declared origin"
+              done={serializedPillars?.pillar_1_done}
+              detail={serializedPillars?.pillar_1_done ? 'Complete' : `${Math.round(serializedPillars?.pillar_1_score || 0)}% — need 3 corroborations`}
+            />
+            <PillarRow
+              name="Presence Pulse"
+              desc="30 days of consistent phone and financial activity"
+              done={serializedPillars?.pillar_2_done}
+              detail={serializedPillars?.pillar_2_done ? 'Complete' : `${serializedPillars?.p2_days_present || 0}/30 days`}
+            />
+            <PillarRow
+              name="Activity Threads"
+              desc="5 distinct financial transactions with different members"
+              done={serializedPillars?.pillar_3_done}
+              detail={serializedPillars?.pillar_3_done ? 'Complete' : `${serializedPillars?.p3_threads || 0}/5 partners`}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Origin corroboration (if Pillar 1 incomplete) */}
-      {!serializedPillars?.pillar_1_done && member.origin_country && (
-        <OriginCorroborate
-          memberId={member.id}
-          originCountry={member.origin_country}
-          currentScore={serializedPillars?.pillar_1_score || 0}
-        />
-      )}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div className="space-y-6">
+          {!serializedPillars?.pillar_1_done && member.origin_country && (
+            <OriginCorroborate
+              memberId={member.id}
+              originCountry={member.origin_country}
+              currentScore={serializedPillars?.pillar_1_score || 0}
+            />
+          )}
 
-      {/* Financial stats */}
-      <div className="card">
-        <h2 className="font-display text-lg text-ink-900 mb-4">Financial record</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatBlock label="Savings groups" value={String(chamaCount || 0)} />
-          <StatBlock label="Loans" value={String(totalLoans)} />
-          <StatBlock label="Repayment rate" value={`${repayRate}%`} />
-          <StatBlock label="Savings consistency" value={totalContribs > 0 ? `${savingsConsistency}%` : 'N/A'} />
+          <CreditNarrativeSection {...narrativeProps} />
         </div>
-      </div>
 
-      {/* Credit narrative */}
-      <CreditNarrativeSection {...narrativeProps} />
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="font-display text-lg text-ink-900 mb-4">Financial record</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatBlock label="Savings groups" value={String(chamaCount || 0)} />
+              <StatBlock label="Loans" value={String(totalLoans)} />
+              <StatBlock label="Repayment rate" value={`${repayRate}%`} />
+              <StatBlock label="Savings consistency" value={totalContribs > 0 ? `${savingsConsistency}%` : 'N/A'} />
+            </div>
+          </div>
 
-      {/* Settings */}
-      <div className="card">
-        <h2 className="font-display text-lg text-ink-900 mb-4">Settings</h2>
-        <LanguageSetting currentLanguage={member.language} />
+          <div className="card">
+            <h2 className="font-display text-lg text-ink-900 mb-4">Settings</h2>
+            <LanguageSetting currentLanguage={member.language} />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -172,7 +186,7 @@ export default async function ProfilePage() {
 
 function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-earth-50 rounded-xl px-3 py-2">
+    <div className="rounded-xl border border-earth-100 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm">
       <div className="flex items-center gap-1.5 text-earth-400 mb-0.5">{icon}<span className="text-xs">{label}</span></div>
       <p className="text-sm font-medium text-ink-900">{value}</p>
     </div>
