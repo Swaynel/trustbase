@@ -21,6 +21,17 @@ const CATEGORY_EMOJI: Record<string, string> = {
   food: '🌽', clothing: '👗', services: '🔧', electronics: '📱', crafts: '🧶', other: '📦',
 }
 
+async function readJsonSafely(res: Response) {
+  const raw = await res.text()
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
 export default function ListingGrid({ listings, currentMemberId }: {
   listings: Listing[]; currentMemberId: string
 }) {
@@ -55,19 +66,42 @@ function ListingCard({ listing: l, isOwner }: { listing: Listing; isOwner: boole
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId: l.id }),
       })
-      const orderData = await orderRes.json()
-      if (!orderRes.ok) { alert(orderData.error); setOrdering(false); return }
+      const orderData = await readJsonSafely(orderRes)
+      if (!orderRes.ok || !orderData || !('order' in orderData)) {
+        alert(
+          (orderData && typeof orderData.error === 'string' && orderData.error) ||
+          'Could not create your marketplace order.'
+        )
+        return
+      }
 
       // Then initiate charge
       const chargeRes = await fetch('/api/paystack/charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'marketplace_order', amount: l.price, orderId: orderData.order.id }),
+        body: JSON.stringify({ type: 'marketplace_order', amount: l.price, orderId: (orderData.order as { id: string }).id }),
       })
-      const chargeData = await chargeRes.json()
-      if (chargeData.authorizationUrl) window.location.href = chargeData.authorizationUrl
-    } catch (e) { console.error(e) }
-    setOrdering(false)
+      const chargeData = await readJsonSafely(chargeRes)
+      if (!chargeRes.ok || !chargeData) {
+        alert(
+          (chargeData && typeof chargeData.error === 'string' && chargeData.error) ||
+          'Could not start payment right now.'
+        )
+        return
+      }
+
+      if (typeof chargeData.authorizationUrl === 'string') {
+        window.location.href = chargeData.authorizationUrl
+        return
+      }
+
+      alert('Payment link was not returned. Please try again.')
+    } catch (e) {
+      console.error(e)
+      alert('Something went wrong while starting your purchase.')
+    } finally {
+      setOrdering(false)
+    }
   }
 
   const imgUrl = l.cloudinary_public_id ? getListingUrl(l.cloudinary_public_id) : null

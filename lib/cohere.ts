@@ -1,6 +1,8 @@
 // lib/cohere.ts
 const COHERE_KEY = process.env.COHERE_API_KEY!
 const BASE = 'https://api.cohere.com/v1'
+const DEFAULT_CHAT_MODEL = 'command-r-08-2024'
+const PREMIUM_CHAT_MODEL = 'command-r-plus-08-2024'
 
 async function cohereFetch(path: string, body: unknown) {
   const res = await fetch(`${BASE}${path}`, {
@@ -16,17 +18,17 @@ async function cohereFetch(path: string, body: unknown) {
   return json
 }
 
-// ─── CHAT (command-r / command-r-plus) ───────────────────────────────────────
+// ─── CHAT (Command R Aug 2024 / Command R+ Aug 2024) ─────────────────────────
 export async function chat({
   message,
   systemPrompt,
   chatHistory = [],
-  model = 'command-r',
+  model = DEFAULT_CHAT_MODEL,
 }: {
   message: string
   systemPrompt?: string
   chatHistory?: Array<{ role: 'USER' | 'CHATBOT'; message: string }>
-  model?: 'command-r' | 'command-r-plus'
+  model?: typeof DEFAULT_CHAT_MODEL | typeof PREMIUM_CHAT_MODEL
 }) {
   const data = await cohereFetch('/chat', {
     model,
@@ -101,7 +103,7 @@ Pillar 3 (Activity Threads): ${p3Done ? 'COMPLETE' : `${p3Threads}/5 distinct tr
 `.trim()
 
   return chat({
-    model: 'command-r',
+    model: DEFAULT_CHAT_MODEL,
     systemPrompt: `You are TrustBase's member assistant. Respond in ${lang}. 
 Keep replies under 160 characters for SMS. Be encouraging and specific. 
 Explain what the member needs to do next to advance their identity level.`,
@@ -172,7 +174,7 @@ summary, key_discrepancy, recommendation (one of: refund_buyer|release_to_seller
 `.trim()
 
   const text = await chat({
-    model: 'command-r-plus',
+    model: PREMIUM_CHAT_MODEL,
     systemPrompt: 'You are a fair dispute resolution assistant for a community marketplace. Analyze disputes objectively and return only JSON.',
     message,
   })
@@ -229,7 +231,7 @@ Total Transactions: ${transactionCount}
 `.trim()
 
   const english = await chat({
-    model: 'command-r-plus',
+    model: PREMIUM_CHAT_MODEL,
     systemPrompt: `You write financial identity narratives for refugee community members. 
 Write a professional 1-paragraph narrative describing financial reliability and community standing.
 Do NOT include raw numbers — describe qualitatively. No markdown.`,
@@ -239,7 +241,7 @@ Do NOT include raw numbers — describe qualitatively. No markdown.`,
   if (language === 'en') return english
 
   const translated = await chat({
-    model: 'command-r-plus',
+    model: PREMIUM_CHAT_MODEL,
     systemPrompt: `Translate the following financial narrative to ${langNames[language] || 'English'}. 
 Keep the professional tone. Return only the translated text.`,
     message: english,
@@ -266,7 +268,7 @@ export async function onboardingGuide({
   const lang = langNames[language] || 'English'
 
   return chat({
-    model: 'command-r',
+    model: DEFAULT_CHAT_MODEL,
     systemPrompt: `You are TrustBase's helpful community guide. Respond in ${lang}.
 The member's current identity level is ${level}/4.
 Their active savings groups: ${activeChamas.join(', ') || 'none yet'}.

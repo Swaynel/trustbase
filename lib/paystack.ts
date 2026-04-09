@@ -13,8 +13,30 @@ async function paystackFetch(path: string, opts: RequestInit = {}) {
       ...(opts.headers || {}),
     },
   })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.message || 'Paystack error')
+
+  const raw = await res.text()
+  let json: Record<string, unknown> | null = null
+
+  if (raw) {
+    try {
+      json = JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      json = null
+    }
+  }
+
+  if (!res.ok) {
+    const message =
+      (json && typeof json.message === 'string' && json.message) ||
+      raw ||
+      `Paystack error (${res.status})`
+    throw new Error(message)
+  }
+
+  if (!json) {
+    throw new Error('Paystack returned an empty response')
+  }
+
   return json
 }
 

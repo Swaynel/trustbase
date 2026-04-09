@@ -5,17 +5,31 @@ import AppNav from '@/components/AppNav'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, member } = await getCurrentUserWithMember()
-  if (!user) redirect('/login')
 
-  if (!member) redirect('/login')
+  if (!user || !member) {
+    redirect('/login')
+  }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-[100dvh] bg-sand-50 text-ink-900 selection:bg-earth-200 selection:text-ink-900">
+
       <AppNav member={member} />
-      <main className="min-w-0 flex-1 min-h-screen bg-sand-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
+
+      <main className="relative flex flex-1 flex-col min-w-0 overflow-hidden md:ml-3">
+
+        {/* Subtle depth gradient behind content header area */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-earth-100/25 to-transparent"
+        />
+
+        {/* Scrollable region */}
+        <div className="relative flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+            {children}
+          </div>
         </div>
+
       </main>
     </div>
   )

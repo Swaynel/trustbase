@@ -97,22 +97,62 @@ export default async function GovernancePage() {
       </div>
 
       {/* My voting power */}
-      <div className="card bg-earth-500 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-earth-200 mb-1">Your governance weight</p>
-            <p className="font-display text-4xl">{WEIGHT}×</p>
-            <p className="text-xs text-earth-200 mt-1">{LEVEL_NAMES[member.identity_level]}</p>
-          </div>
-          <div className="text-right text-xs text-earth-200 space-y-1">
-            <p>Observer: 0×</p>
-            <p>Participant: 1×</p>
-            <p>Member: 2×</p>
-            <p>Trusted: 3×</p>
-            <p className="font-medium text-white">Anchor: 3×</p>
-          </div>
-        </div>
-      </div>
+     <div className="relative overflow-hidden rounded-2xl border border-earth-400/30 bg-gradient-to-br from-earth-500 via-earth-600 to-earth-700 text-white shadow-lg p-6">
+
+  {/* subtle glow */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)] pointer-events-none" />
+
+  <div className="relative flex items-start justify-between gap-6">
+
+   <div className="flex items-stretch justify-between gap-8">
+
+  {/* LEFT */}
+  <div className="flex flex-col justify-center space-y-2 min-w-[120px]">
+    <p className="text-xs tracking-wide uppercase text-earth-200/70">
+      Governance Weight
+    </p>
+
+    <div className="flex items-start">
+      <p className="font-display text-5xl leading-none">
+        {WEIGHT}
+      </p>
+      <span className="text-xl mt-1 ml-1 opacity-70">×</span>
+    </div>
+
+    <p className="text-sm text-earth-200/90 font-medium">
+      {LEVEL_NAMES[member.identity_level]}
+    </p>
+  </div>
+
+  {/* RIGHT */}
+  <div className="flex-1 border-l border-earth-300/20 pl-6">
+    <div className="grid grid-cols-2 gap-y-1 text-xs text-earth-200/70">
+
+      <span>Observer</span>
+      <span className="text-right">0×</span>
+
+      <span>Participant</span>
+      <span className="text-right">1×</span>
+
+      <span>Member</span>
+      <span className="text-right">2×</span>
+
+      <span>Trusted</span>
+      <span className="text-right">3×</span>
+
+      {/* Highlight current */}
+      <span className="text-white font-medium mt-2 pt-2 border-t border-earth-300/20">
+        Anchor
+      </span>
+      <span className="text-white font-medium text-right mt-2 pt-2 border-t border-earth-300/20">
+        3×
+      </span>
+
+    </div>
+  </div>
+</div>
+  </div>
+</div>
 
       {/* How voting works */}
       <div className="card bg-earth-50 border-earth-200">

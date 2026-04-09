@@ -45,7 +45,7 @@ TrustBase is a community-run financial network where refugees save together, gua
 | File storage | Cloudinary |
 | Payments | Paystack (Charge, Transfers, Webhooks) |
 | USSD / SMS | Africa's Talking |
-| AI provider | Cohere (command-r, command-r-plus, embed-multilingual, classify) |
+| AI provider | Cohere (command-r-08-2024, command-r-plus-08-2024, embed-multilingual, classify) |
 | Deployment | Vercel + Supabase Cloud |
 
 ---
@@ -146,13 +146,13 @@ All platform functions accessible on any phone via `*483*#`:
 
 | Feature | Model | Where |
 |---------|-------|-------|
-| Identity explainer SMS | command-r | `GET /api/identity/explain`, USSD `*483*00#` |
+| Identity explainer SMS | command-r-08-2024 | `GET /api/identity/explain`, USSD `*483*00#` |
 | Fraud & anomaly detection | classify (few-shot) | Nightly edge function |
 | Listing categorisation | classify + embed | `POST /api/marketplace/listings` |
 | Semantic marketplace search | embed-multilingual-v3.0 + pgvector | `GET /api/marketplace/search?q=` |
-| Dispute resolution | command-r-plus | `POST /api/marketplace/disputes` |
-| Multilingual onboarding | command-r | `POST /api/cohere/onboarding`, SMS `HELP` |
-| Credit narrative / passport | command-r-plus | `POST /api/cohere/credit-narrative` |
+| Dispute resolution | command-r-plus-08-2024 | `POST /api/marketplace/disputes` |
+| Multilingual onboarding | command-r-08-2024 | `POST /api/cohere/onboarding`, SMS `HELP` |
+| Credit narrative / passport | command-r-plus-08-2024 | `POST /api/cohere/credit-narrative` |
 
 ---
 
