@@ -7,6 +7,8 @@ import { Star, Shield, Calendar, Hash } from 'lucide-react'
 import CreditNarrativeSection from '@/components/identity/CreditNarrativeSection'
 import OriginCorroborate from '@/components/identity/OriginCorroborate'
 import LanguageSetting from '@/components/profile/LanguageSetting'
+import ProfileAvatarUploader from '@/components/profile/ProfileAvatarUploader'
+import { getProfileUrl } from '@/lib/cloudinary'
 
 const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
 const LANG_NAMES: Record<string, string> = { en: 'English', sw: 'Swahili', fr: 'Français', ar: 'العربية' }
@@ -99,9 +101,11 @@ export default async function ProfilePage() {
         {/* Top: Profile header + mini stats */}
         <div className="border-b border-earth-100 bg-earth-50/60 p-6 sm:p-8">
           <div className="flex items-start gap-4 mb-6">
-            <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-earth-500 flex items-center justify-center text-white text-2xl font-display">
-              {(member.display_name || '?').charAt(0).toUpperCase()}
-            </div>
+            <ProfileAvatarUploader
+              displayName={member.display_name || 'Member'}
+              cloudinaryProfileId={member.cloudinary_profile_id}
+              imageUrl={member.cloudinary_profile_id ? getProfileUrl(member.cloudinary_profile_id) : undefined}
+            />
             <div className="min-w-0 pt-0.5">
               <div className="flex flex-wrap items-center gap-2.5 mb-1">
                 <h2 className="font-display text-2xl text-ink-900">{member.display_name || 'Anonymous'}</h2>

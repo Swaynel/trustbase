@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
+import { getProfileUrl } from '@/lib/cloudinary'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, member } = await getCurrentUserWithMember()
@@ -13,7 +14,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-[100dvh] bg-sand-50 text-ink-900 selection:bg-earth-200 selection:text-ink-900">
 
-      <AppNav member={member} />
+      <AppNav
+        member={member}
+        profileImageUrl={member.cloudinary_profile_id ? getProfileUrl(member.cloudinary_profile_id) : undefined}
+      />
 
       <main className="relative flex flex-1 flex-col min-w-0 overflow-hidden md:ml-3">
 

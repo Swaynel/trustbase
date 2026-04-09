@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import Avatar from '@/components/ui/Avatar'
 
 const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
 const LEVEL_COLORS = ['bg-gray-400', 'bg-amber-500', 'bg-orange-500', 'bg-forest-500', 'bg-earth-600']
@@ -45,6 +46,7 @@ interface Member {
 
 function NavContent({
   member,
+  profileImageUrl,
   level,
   pathname,
   collapsed,
@@ -53,6 +55,7 @@ function NavContent({
   onSignOut,
 }: {
   member: Member
+  profileImageUrl?: string
   level: number
   pathname: string
   collapsed: boolean
@@ -148,9 +151,14 @@ function NavContent({
       <div className="border-t border-earth-100">
         <div className="px-3 py-3 border-b border-earth-100">
           <div className={`flex px-1 ${collapsed ? 'justify-center' : 'items-center gap-3'}`}>
-            <div className={`w-10 h-10 rounded-full ${LEVEL_COLORS[level]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-              {(member.display_name || 'U')[0].toUpperCase()}
-            </div>
+            <Avatar
+              name={member.display_name || 'Member'}
+              imageUrl={profileImageUrl}
+              size="sm"
+              rounded="full"
+              className={profileImageUrl ? undefined : LEVEL_COLORS[level]}
+              fallbackClassName="font-bold"
+            />
             {!collapsed && (
               <div className="min-w-0">
                 <p className="font-medium text-ink-900 text-sm truncate">{member.display_name || 'Member'}</p>
@@ -182,7 +190,7 @@ function NavContent({
   )
 }
 
-export default function AppNav({ member }: { member: Member }) {
+export default function AppNav({ member, profileImageUrl }: { member: Member; profileImageUrl?: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -205,6 +213,7 @@ export default function AppNav({ member }: { member: Member }) {
       >
         <NavContent
           member={member}
+          profileImageUrl={profileImageUrl}
           level={level}
           pathname={pathname}
           collapsed={collapsed}
@@ -236,6 +245,7 @@ export default function AppNav({ member }: { member: Member }) {
           <aside className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
             <NavContent
               member={member}
+              profileImageUrl={profileImageUrl}
               level={level}
               pathname={pathname}
               collapsed={false}
