@@ -118,11 +118,11 @@ export default function NewTransferForm({ memberId, balance }: NewTransferFormPr
         <div className="flex items-center justify-between gap-4 text-sm">
           <div>
             <p className="text-earth-500">Available balance</p>
-            <p className="font-display text-lg text-ink-900">KES {balance.toLocaleString()}</p>
+            <p className="font-display text-lg text-ink-100">KES {balance.toLocaleString()}</p>
           </div>
           <div className="text-right">
             <p className="text-earth-500">Sender</p>
-            <p className="text-xs font-medium text-ink-700">{memberId.slice(0, 8)}</p>
+            <p className="text-xs font-medium text-ink-200">{memberId.slice(0, 8)}</p>
           </div>
         </div>
       </div>

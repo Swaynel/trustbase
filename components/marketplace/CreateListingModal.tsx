@@ -20,7 +20,16 @@ export default function CreateListingModal() {
     setUploading(true)
     try {
       // Get signed upload params
-      const signRes = await fetch('/api/cloudinary/sign?folder=marketplace')
+      const signRes = await fetch('/api/cloudinary/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'trustbase/listings' }),
+      })
+
+      if (!signRes.ok) {
+        throw new Error('Could not prepare upload')
+      }
+
       const { timestamp, signature, apiKey, cloudName, folder } = await signRes.json()
 
       const fd = new FormData()
@@ -76,11 +85,11 @@ export default function CreateListingModal() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in overflow-y-auto max-h-[90vh]">
+          <div className="surface-modal w-full max-w-md fade-in overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-earth-100">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-earth-500" />
-                <h2 className="font-display text-xl text-ink-900">New listing</h2>
+                <h2 className="font-display text-xl text-ink-100">New listing</h2>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-earth-50 rounded-lg">
                 <X className="w-4 h-4 text-earth-500" />
@@ -90,7 +99,7 @@ export default function CreateListingModal() {
             <div className="p-6 space-y-4">
               {/* Image upload */}
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Photo</label>
+                <label className="field-label">Photo</label>
                 <div
                   onClick={() => fileRef.current?.click()}
                   className={`relative h-32 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-colors
@@ -110,17 +119,17 @@ export default function CreateListingModal() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Title</label>
+                <label className="field-label">Title</label>
                 <input className="input" placeholder="What are you selling?"
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Description</label>
+                <label className="field-label">Description</label>
                 <textarea className="input resize-none h-24" placeholder="Describe your item or service…"
                   value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Price (KES)</label>
+                <label className="field-label">Price (KES)</label>
                 <input className="input" type="number" placeholder="250"
                   value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
               </div>

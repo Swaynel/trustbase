@@ -79,7 +79,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
             ? <Image src={imgUrl} alt={listing.title} fill sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />
             : <span className="text-6xl">{CATEGORY_EMOJI[listing.category || 'other'] || '📦'}</span>
           }
-          <span className="absolute top-3 left-3 badge bg-white/90 text-earth-700 shadow-sm">
+          <span className="absolute top-3 left-3 badge bg-earth-800 text-earth-300 shadow-sm">
             {listing.category || 'other'}
           </span>
         </div>
@@ -87,8 +87,8 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
         <div className="p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h1 className="font-display text-2xl text-ink-900 mb-1">{listing.title}</h1>
-              <p className="text-earth-600 leading-relaxed">{listing.description}</p>
+              <h1 className="font-display text-2xl text-ink-100 mb-1">{listing.title}</h1>
+              <p className="text-earth-400 leading-relaxed">{listing.description}</p>
             </div>
             <div className="text-right flex-shrink-0">
               <p className="font-display text-3xl text-earth-600">KES {decimalToNumber(listing.price).toLocaleString()}</p>
@@ -101,7 +101,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
               {(seller?.display_name || '?')[0].toUpperCase()}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-ink-900">{seller?.display_name || 'Seller'}</p>
+              <p className="text-sm font-medium text-ink-100">{seller?.display_name || 'Seller'}</p>
               <div className="flex items-center gap-2 text-xs text-earth-400">
                 <span>Level {seller?.identity_level || 0}</span>
                 <span>·</span>
@@ -133,7 +133,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
           ) : listing.status === 'active' ? (
             <BuyButton listing={{ id: listing.id, price: decimalToNumber(listing.price), title: listing.title }} />
           ) : (
-            <div className="p-3 rounded-xl bg-gray-50 text-center text-sm text-gray-500">
+            <div className="surface-subtle p-3 text-center text-sm text-earth-400">
               This listing is no longer available
             </div>
           )}

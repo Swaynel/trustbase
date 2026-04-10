@@ -105,6 +105,8 @@ export default async function DashboardPage() {
     }))
 
   const LEVEL_NAMES = ['Observer', 'Participant', 'Member', 'Trusted Member', 'Community Anchor']
+  // Server-rendered once per request to show account tenure in days.
+  // eslint-disable-next-line react-hooks/purity
   const daysSince = Math.floor((Date.now() - new Date(member.created_at).getTime()) / 86_400_000)
 
   return (
@@ -113,7 +115,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="fade-in flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl sm:text-4xl text-ink-900 tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl text-ink-100 tracking-tight">
             Hello, {member.display_name?.split(' ')[0] || 'friend'} 👋
           </h1>
           <p className="text-earth-500 font-medium mt-1 text-sm">
@@ -143,7 +145,7 @@ export default async function DashboardPage() {
       {/* Services */}
       <div className="fade-in-2">
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="font-display text-lg text-ink-900">Services</h2>
+          <h2 className="font-display text-lg text-ink-100">Services</h2>
           <div className="h-px flex-1 bg-earth-100" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -161,7 +163,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-3">
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-earth-100">
-              <h2 className="font-display text-lg text-ink-900">Recent Activity</h2>
+              <h2 className="font-display text-lg text-ink-100">Recent Activity</h2>
               <Link
                 href="/profile"
                 className="flex items-center gap-1.5 text-xs font-medium text-earth-500 hover:text-earth-700 transition-colors"
@@ -181,7 +183,7 @@ export default async function DashboardPage() {
           {/* Chamas */}
           <div className="card">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-earth-100">
-              <h2 className="font-display text-lg text-ink-900">My Chamas</h2>
+              <h2 className="font-display text-lg text-ink-100">My Chamas</h2>
               <Link
                 href="/chama"
                 className="text-xs font-medium text-earth-500 hover:text-earth-700 transition-colors"
@@ -203,7 +205,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-0.5">Active Vote</p>
-                  <p className="text-sm font-medium text-ink-900 truncate">{openVotes[0].proposal}</p>
+                  <p className="text-sm font-medium text-ink-100 truncate">{openVotes[0].proposal}</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-earth-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
               </div>
@@ -214,13 +216,13 @@ export default async function DashboardPage() {
           <div className="rounded-xl bg-ink-900 text-white p-6 overflow-hidden relative">
             <div className="relative z-10 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-base">📱</div>
+                <div className="w-8 h-8 rounded-lg bg-earth-800 flex items-center justify-center text-base">📱</div>
                 <h4 className="font-display text-base">Offline Access</h4>
               </div>
               <p className="text-sm text-ink-300 leading-relaxed">
                 No data? No problem. Use our secure USSD gateway to manage your trust score.
               </p>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 font-mono text-sm space-y-2">
+              <div className="rounded-lg border border-earth-200 bg-earth-800 p-4 font-mono text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-ink-400">Portal</span>
                   <span className="text-earth-300">*483*00#</span>
@@ -257,7 +259,7 @@ function StatCard({
       <p className="text-[11px] font-semibold text-earth-400 uppercase tracking-widest mb-1">{label}</p>
       <div className="flex items-baseline gap-1">
         {prefix && <span className="text-xs font-medium text-earth-300">{prefix}</span>}
-        <p className="font-display text-2xl text-ink-900">{value}</p>
+        <p className="font-display text-2xl text-ink-100">{value}</p>
         {suffix && <span className="text-xs font-medium text-earth-400 ml-0.5">{suffix}</span>}
       </div>
     </div>
@@ -277,11 +279,11 @@ function QuickAction({
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
         locked
           ? 'bg-earth-50 text-earth-200'
-          : 'bg-earth-100 text-earth-600 group-hover:bg-earth-600 group-hover:text-white'
+          : 'bg-earth-100 text-earth-300 group-hover:bg-earth-600 group-hover:text-white'
       }`}>
         {icon}
       </div>
-      <span className={`text-xs font-semibold uppercase tracking-tight ${locked ? 'text-earth-300' : 'text-ink-800'}`}>
+      <span className={`text-xs font-semibold uppercase tracking-tight ${locked ? 'text-earth-300' : 'text-ink-100'}`}>
         {label}
       </span>
       {locked && (

@@ -57,11 +57,11 @@ export default function RequestLoanButton({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in overflow-y-auto max-h-[90vh]">
+          <div className="surface-modal w-full max-w-md fade-in overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-earth-100">
               <div className="flex items-center gap-2">
                 <Landmark className="w-5 h-5 text-earth-500" />
-                <h2 className="font-display text-xl text-ink-900">Request a loan</h2>
+                <h2 className="font-display text-xl text-ink-100">Request a loan</h2>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-earth-50 rounded-lg">
                 <X className="w-4 h-4 text-earth-500" />
@@ -70,27 +70,25 @@ export default function RequestLoanButton({
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Amount (KES)</label>
+                <label className="field-label">Amount (KES)</label>
                 <input className="input" type="number" placeholder="1000" min="100"
                   value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Purpose</label>
+                <label className="field-label">Purpose</label>
                 <textarea className="input resize-none h-20" placeholder="What will you use this for?"
                   value={form.purpose} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-2">
-                  Select guarantors (min 2)
-                </label>
+                <label className="field-label">Select guarantors (min 2)</label>
                 {eligibleGuarantors.length === 0 ? (
                   <p className="text-xs text-earth-400">No eligible guarantors in this group (need Level 2+).</p>
                 ) : (
                   <div className="space-y-2">
                     {eligibleGuarantors.map(m => (
                       <label key={m.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
-                        ${form.guarantorIds.includes(m.id) ? 'border-earth-400 bg-earth-50' : 'border-earth-100 hover:bg-earth-50'}`}>
+                        ${form.guarantorIds.includes(m.id) ? 'border-primary-500 bg-earth-50' : 'border-earth-100 bg-earth-800 hover:bg-earth-50'}`}>
                         <input
                           type="checkbox"
                           checked={form.guarantorIds.includes(m.id)}
@@ -98,7 +96,7 @@ export default function RequestLoanButton({
                           className="accent-earth-500"
                         />
                         <div>
-                          <p className="text-sm font-medium text-ink-800">{m.display_name}</p>
+                          <p className="text-sm font-medium text-ink-100">{m.display_name}</p>
                           <p className="text-xs text-earth-400">Level {m.identity_level}</p>
                         </div>
                       </label>

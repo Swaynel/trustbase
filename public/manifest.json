@@ -4,8 +4,8 @@
   "description": "Save together, guarantee each other's credit, trade, and build a verified financial identity.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#fffdf5",
-  "theme_color": "#c07030",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
   "orientation": "portrait",
   "categories": ["finance", "social"],
   "icons": [

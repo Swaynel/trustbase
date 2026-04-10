@@ -60,11 +60,11 @@ export default function CreateChamaModal() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+          <div className="surface-modal w-full max-w-md fade-in">
             <div className="flex items-center justify-between p-6 border-b border-earth-100">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-earth-500" />
-                <h2 className="font-display text-xl text-ink-900">Create savings group</h2>
+                <h2 className="font-display text-xl text-ink-100">Create savings group</h2>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-earth-50 rounded-lg">
                 <X className="w-4 h-4 text-earth-500" />
@@ -73,24 +73,24 @@ export default function CreateChamaModal() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Group name</label>
+                <label className="field-label">Group name</label>
                 <input className="input" placeholder="e.g. Nairobi Women's Circle" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Description</label>
+                <label className="field-label">Description</label>
                 <textarea className="input resize-none h-20" placeholder="What is this group for?"
                   value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-earth-600 mb-1.5">Contribution (KES)</label>
+                  <label className="field-label">Contribution (KES)</label>
                   <input className="input" type="number" placeholder="500" min="10"
                     value={form.contribution_amount}
                     onChange={e => setForm(f => ({ ...f, contribution_amount: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-earth-600 mb-1.5">Cycle (days)</label>
+                  <label className="field-label">Cycle (days)</label>
                   <select className="input" value={form.cycle_days}
                     onChange={e => setForm(f => ({ ...f, cycle_days: e.target.value }))}>
                     <option value="7">Weekly (7)</option>

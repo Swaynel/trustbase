@@ -54,11 +54,11 @@ export default function LanguageSetting({
               onClick={() => setSelected(l.code)}
               className={`group relative flex flex-col items-start p-4 rounded-2xl border transition-all duration-200 ${
                 isSelected
-                  ? 'bg-ink-900 border-ink-900 text-white shadow-xl shadow-ink-100 -translate-y-0.5'
-                  : 'bg-white border-earth-100 hover:border-earth-300 hover:bg-earth-50/50'
+                  ? 'bg-earth-800 border-primary-500 text-white shadow-xl shadow-black/30 -translate-y-0.5'
+                  : 'surface-subtle hover:border-primary-500/50 hover:bg-earth-50/70'
               }`}
             >
-              <span className={`text-sm font-display mb-0.5 ${isSelected ? 'text-white' : 'text-ink-900'}`}>
+              <span className={`text-sm font-display mb-0.5 ${isSelected ? 'text-white' : 'text-ink-100'}`}>
                 {l.native}
               </span>
               <span className={`text-xs ${isSelected ? 'text-earth-300' : 'text-earth-400'}`}>
@@ -87,7 +87,7 @@ export default function LanguageSetting({
           saved
             ? 'bg-forest-500 text-white'
             : hasChange
-              ? 'bg-earth-600 text-white hover:bg-earth-700 shadow-lg shadow-earth-100'
+              ? 'bg-earth-600 text-white hover:bg-earth-700 shadow-lg shadow-black/30'
               : 'bg-earth-100 text-earth-400 opacity-50 cursor-not-allowed'
         }`}
       >

@@ -40,14 +40,14 @@ export default function RecentChamas({ chamas, memberLevel }: {
       {chamas.map(c => (
         <Link key={c.id} href={`/chama/${c.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50 transition-colors">
           <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-earth-100 flex items-center justify-center">
-            <Users className="w-4 h-4 text-earth-600" />
+            <Users className="w-4 h-4 text-earth-300" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-ink-800 truncate">{c.name}</p>
+            <p className="text-sm font-medium text-ink-100 truncate">{c.name}</p>
             <p className="text-xs text-earth-400">KES {c.contribution_amount}/cycle</p>
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-sm font-medium text-ink-800">KES {c.balance.toLocaleString()}</p>
+            <p className="text-sm font-medium text-ink-100">KES {c.balance.toLocaleString()}</p>
             <span className={`badge text-xs ${STATUS_COLORS[c.status] || 'bg-gray-100 text-gray-500'}`}>
               {c.status}
             </span>

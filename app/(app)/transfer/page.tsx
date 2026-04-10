@@ -56,7 +56,7 @@ export default async function TransferPage() {
         </div>
         <div className="card text-center py-16">
           <Lock className="w-12 h-12 text-earth-300 mx-auto mb-3" />
-          <h2 className="font-display text-xl text-ink-900 mb-2">Level 2 required</h2>
+          <h2 className="font-display text-xl text-ink-100 mb-2">Level 2 required</h2>
           <p className="text-sm text-earth-500">Complete 2 identity pillars to use cross-city transfers.</p>
         </div>
       </div>
@@ -128,8 +128,8 @@ export default async function TransferPage() {
 
       {/* How it works */}
       <div className="card bg-earth-50 border-earth-200">
-        <p className="text-xs font-medium text-earth-700 mb-3">How the community transfer network works</p>
-        <div className="grid md:grid-cols-4 gap-2 text-xs text-earth-600">
+        <p className="text-xs font-medium text-earth-300 mb-3">How the community transfer network works</p>
+        <div className="grid md:grid-cols-4 gap-2 text-xs text-earth-400">
           <div className="flex gap-2">
             <span className="font-mono text-earth-400 flex-shrink-0">01</span>
             You request to send KES X to City Y
@@ -158,14 +158,14 @@ export default async function TransferPage() {
 
       {/* New transfer form */}
       <div className="card">
-        <h2 className="font-display text-lg text-ink-900 mb-4">Send a transfer</h2>
+        <h2 className="font-display text-lg text-ink-100 mb-4">Send a transfer</h2>
         <NewTransferForm memberId={member.id} balance={member.internal_balance} />
       </div>
 
       {/* Agent opportunities */}
       {agentRequests.length > 0 && (
         <div className="card">
-          <h2 className="font-display text-lg text-ink-900 mb-1">Act as an agent</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-1">Act as an agent</h2>
           <p className="text-xs text-earth-500 mb-4">
             Accept these requests and earn a small fee to your internal balance
           </p>
@@ -180,7 +180,7 @@ export default async function TransferPage() {
       {/* My transfer history */}
       {myTransfers.length > 0 && (
         <div className="card">
-          <h2 className="font-display text-lg text-ink-900 mb-4">Transfer history</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-4">Transfer history</h2>
           <div className="space-y-2">
             {myTransfers.map((t) => (
               <div key={t.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
@@ -188,7 +188,7 @@ export default async function TransferPage() {
                   <ArrowLeftRight className="w-4 h-4 text-earth-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink-800">
+                  <p className="text-sm font-medium text-ink-100">
                     KES {t.amount.toLocaleString()} → {t.destination_city}
                   </p>
                   <p className="text-xs text-earth-400">
@@ -212,7 +212,7 @@ function AgentRequestCard({ transfer, agentId }: { transfer: SerializedTransfer;
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl border border-earth-200 bg-earth-50">
       <div className="flex-1">
-        <p className="text-sm font-medium text-ink-900">
+        <p className="text-sm font-medium text-ink-100">
           {transfer.members?.display_name || 'Member'} wants to send KES {transfer.amount.toLocaleString()}
         </p>
         <p className="text-xs text-earth-500 mt-0.5">

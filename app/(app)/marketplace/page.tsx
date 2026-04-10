@@ -7,6 +7,7 @@ import { Lock } from 'lucide-react'
 import SearchBar from '@/components/marketplace/SearchBar'
 import ListingGrid from '@/components/marketplace/ListingGrid'
 import CreateListingModal from '@/components/marketplace/CreateListingModal'
+import { getListingUrl } from '@/lib/cloudinary'
 
 const CATEGORIES = ['all', 'food', 'clothing', 'services', 'electronics', 'crafts', 'other']
 
@@ -39,6 +40,7 @@ type MarketplaceListing = {
   category: string
   price: number
   cloudinary_public_id: string | null
+  image_url?: string | null
   seller_id: string
   created_at: string
   members: { display_name: string; identity_level?: number } | null
@@ -64,7 +66,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
         </div>
         <div className="card text-center py-16">
           <Lock className="w-12 h-12 text-earth-300 mx-auto mb-3" />
-          <h2 className="font-display text-xl text-ink-900 mb-2">Level 2 required</h2>
+          <h2 className="font-display text-xl text-ink-100 mb-2">Level 2 required</h2>
           <p className="text-sm text-earth-500">Complete 2 identity pillars to access the marketplace.</p>
         </div>
       </div>
@@ -126,6 +128,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
       ...listing,
       category: listing.category || 'other',
       price: decimalToNumber(listing.price),
+      image_url: listing.cloudinary_public_id ? getListingUrl(listing.cloudinary_public_id) : null,
       created_at: listing.created_at.toISOString(),
       members: { display_name: sellerMap.get(listing.seller_id) || 'Seller' },
     }))

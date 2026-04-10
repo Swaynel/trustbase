@@ -70,14 +70,14 @@ export default function IdentityCard({ member, pillars }: {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Shield className="w-5 h-5 text-earth-500" />
-            <span className="font-display text-xl text-ink-900">{LEVEL_NAMES[level]}</span>
+            <span className="font-display text-xl text-ink-100">{LEVEL_NAMES[level]}</span>
             <span className="badge bg-earth-100 text-earth-700">Level {level}/4</span>
           </div>
           <p className="text-xs text-earth-500">{LEVEL_DESC[level]}</p>
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-xs text-earth-400">Reputation</p>
-          <p className="font-display text-2xl text-ink-900">{Math.round(member.reputation_score)}</p>
+          <p className="font-display text-2xl text-ink-100">{Math.round(member.reputation_score)}</p>
         </div>
       </div>
 
@@ -100,9 +100,9 @@ export default function IdentityCard({ member, pillars }: {
       {/* Three pillars */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         {pillarDefs.map((p, i) => (
-          <div key={i} className={`rounded-xl p-3 text-center transition-colors ${p.done ? 'bg-forest-400/10 border border-forest-400/30' : 'bg-earth-50 border border-earth-100'}`}>
+          <div key={i} className={`rounded-xl p-3 text-center transition-colors ${p.done ? 'bg-forest-400/10 border border-forest-400/30' : 'surface-subtle'}`}>
             <div className="text-lg mb-1">{p.icon}</div>
-            <p className="text-xs font-medium text-ink-800 leading-tight mb-1">{p.name}</p>
+            <p className="text-xs font-medium text-ink-100 leading-tight mb-1">{p.name}</p>
             <div className="flex items-center justify-center gap-1">
               {p.done
                 ? <CheckCircle2 className="w-3.5 h-3.5 text-forest-500" />
@@ -125,7 +125,7 @@ export default function IdentityCard({ member, pillars }: {
       </button>
 
       {explanation && (
-        <div className="mt-3 p-3 rounded-xl bg-earth-50 border border-earth-100">
+        <div className="mt-3 p-3 rounded-xl surface-subtle">
           <p className="text-xs text-earth-700 leading-relaxed">{explanation}</p>
         </div>
       )}

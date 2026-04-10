@@ -89,14 +89,14 @@ export default async function ProfilePage() {
 
       {/* Page Header */}
       <div className="space-y-1.5">
-        <h1 className="mb-0 font-display text-3xl tracking-tight text-ink-900 sm:text-4xl">My Profile</h1>
-        <p className="mb-0 max-w-2xl text-sm leading-relaxed text-earth-500 sm:text-base">
+        <h1 className="mb-0 font-display text-3xl tracking-tight text-ink-100 sm:text-4xl">My Profile</h1>
+        <p className="mb-0 max-w-2xl text-sm leading-relaxed text-earth-400 sm:text-base">
           Your TrustBase identity and financial passport
         </p>
       </div>
 
       {/* Hero Identity Card */}
-      <div className="overflow-hidden rounded-xl border border-earth-100 bg-white shadow-sm">
+      <div className="card overflow-hidden">
 
         {/* Top: Profile header + mini stats */}
         <div className="border-b border-earth-100 bg-earth-50/60 p-6 sm:p-8">
@@ -108,7 +108,7 @@ export default async function ProfilePage() {
             />
             <div className="min-w-0 pt-0.5">
               <div className="flex flex-wrap items-center gap-2.5 mb-1">
-                <h2 className="font-display text-2xl text-ink-900">{member.display_name || 'Anonymous'}</h2>
+                <h2 className="font-display text-2xl text-ink-100">{member.display_name || 'Anonymous'}</h2>
                 <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${LEVEL_DOT_CLASSES[member.identity_level] || LEVEL_DOT_CLASSES[0]}`} />
               </div>
               <p className="text-sm text-earth-500 mb-2">
@@ -116,14 +116,14 @@ export default async function ProfilePage() {
                 <span className="mx-1.5 opacity-40">·</span>
                 {LANG_NAMES[member.language] || member.language}
               </p>
-              <p className="text-sm text-earth-600 leading-relaxed max-w-lg hidden sm:block">
+              <p className="text-sm text-earth-300 leading-relaxed max-w-lg hidden sm:block">
                 A living snapshot of your verified identity, community standing, and financial activity across TrustBase.
               </p>
             </div>
           </div>
 
           {/* Mini Stats — gap-divider grid, no individual card borders */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-earth-100 rounded-lg border border-earth-100 bg-white overflow-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-earth-100 rounded-lg border border-earth-100 bg-earth-800 overflow-hidden">
             <MiniStat icon={<Shield className="w-3.5 h-3.5" />} label="Level" value={`${member.identity_level}/4`} />
             <MiniStat icon={<Star className="w-3.5 h-3.5" />} label="Reputation" value={`${Math.round(member.reputation_score)}`} suffix="/100" />
             <MiniStat icon={<Calendar className="w-3.5 h-3.5" />} label="Active Days" value={String(daysSince)} />
@@ -135,10 +135,10 @@ export default async function ProfilePage() {
         <div className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
-              <h3 className="font-display text-base text-ink-900">Identity pillars</h3>
-              <p className="text-sm text-earth-500 mt-0.5">Signals used to strengthen trust across the network</p>
+              <h3 className="font-display text-base text-ink-100">Identity pillars</h3>
+              <p className="text-sm text-earth-400 mt-0.5">Signals used to strengthen trust across the network</p>
             </div>
-            <span className="inline-flex items-center rounded-full border border-earth-200 bg-white px-3 py-1 text-xs font-medium text-earth-600">
+            <span className="surface-chip text-xs font-medium text-earth-300">
               Level {member.identity_level} Status
             </span>
           </div>
@@ -186,9 +186,9 @@ export default async function ProfilePage() {
         <div className="space-y-6">
 
           {/* Financial Record */}
-          <div className="rounded-xl border border-earth-100 bg-white shadow-sm">
+          <div className="card">
             <div className="px-6 pt-6 pb-5">
-              <h3 className="font-display text-base text-ink-900 mb-4">Financial record</h3>
+              <h3 className="font-display text-base text-ink-100 mb-4">Financial record</h3>
               {/* StatBlocks — gap-divider grid */}
               <div className="grid grid-cols-2 divide-x divide-y divide-earth-100 rounded-lg border border-earth-100 overflow-hidden">
                 <StatBlock label="Savings groups" value={String(chamaCount || 0)} />
@@ -200,9 +200,9 @@ export default async function ProfilePage() {
           </div>
 
           {/* Preferences */}
-          <div className="rounded-xl border border-earth-100 bg-white shadow-sm">
+          <div className="card">
             <div className="px-6 pt-6 pb-5">
-              <h3 className="font-display text-base text-ink-900 mb-4">Preferences</h3>
+              <h3 className="font-display text-base text-ink-100 mb-4">Preferences</h3>
               <LanguageSetting currentLanguage={member.language} />
             </div>
           </div>
@@ -232,7 +232,7 @@ function MiniStat({
         {icon}
         <span className="text-[11px] font-medium uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-base font-semibold text-ink-900">
+      <p className="text-base font-semibold text-ink-100">
         {value}
         {suffix && <span className="text-xs font-medium text-earth-400 ml-0.5">{suffix}</span>}
       </p>
@@ -242,9 +242,9 @@ function MiniStat({
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col px-5 py-4 bg-white">
-      <p className="font-display text-2xl text-ink-900 mb-0.5">{value}</p>
-      <p className="text-xs text-earth-500">{label}</p>
+    <div className="flex flex-col px-5 py-4 bg-earth-800">
+      <p className="font-display text-2xl text-ink-100 mb-0.5">{value}</p>
+      <p className="text-xs text-earth-400">{label}</p>
     </div>
   )
 }
@@ -261,7 +261,7 @@ function PillarRow({
   detail: string
 }) {
   return (
-    <div className={`flex flex-col gap-3 p-5 ${done ? 'bg-forest-50/40' : 'bg-white'}`}>
+    <div className={`flex flex-col gap-3 p-5 ${done ? 'bg-forest-400/10' : 'bg-earth-800'}`}>
       <div className="flex items-center justify-between">
         <div
           className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold
@@ -274,8 +274,8 @@ function PillarRow({
         </span>
       </div>
       <div>
-        <p className="text-sm font-semibold text-ink-900 mb-0.5">{name}</p>
-        <p className="text-xs leading-relaxed text-earth-500">{desc}</p>
+        <p className="text-sm font-semibold text-ink-100 mb-0.5">{name}</p>
+        <p className="text-xs leading-relaxed text-earth-400">{desc}</p>
       </div>
     </div>
   )

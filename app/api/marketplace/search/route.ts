@@ -1,6 +1,7 @@
 // app/api/marketplace/search/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { embedQuery } from '@/lib/cohere'
+import { getListingUrl } from '@/lib/cloudinary'
 import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 
@@ -103,6 +104,7 @@ export async function GET(req: NextRequest) {
         listings: fallbackRows.map((listing: FallbackListingRow) => ({
           ...listing,
           price: decimalToNumber(listing.price),
+          image_url: listing.cloudinary_public_id ? getListingUrl(listing.cloudinary_public_id) : null,
           created_at: listing.created_at.toISOString(),
           members: fallbackSellerMap.get(listing.seller_id)
             ? {
@@ -130,6 +132,7 @@ export async function GET(req: NextRequest) {
       listings: rows.map((row: (typeof rows)[number]) => ({
         ...row,
         price: decimalToNumber(row.price as number | string),
+        image_url: row.cloudinary_public_id ? getListingUrl(row.cloudinary_public_id) : null,
         created_at: row.created_at.toISOString(),
         members: sellerMap.get(row.seller_id)
           ? {

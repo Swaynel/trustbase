@@ -48,20 +48,20 @@ export default function OriginCorroborate({
   }
 
   return (
-    <div className="rounded-[28px] border border-earth-100 bg-white p-6 sm:p-8 shadow-[0_20px_60px_rgba(28,24,19,0.06)]">
+    <div className="card rounded-[28px] p-6 sm:p-8">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-earth-100 flex items-center justify-center">
           <Globe className="w-5 h-5 text-earth-600" />
         </div>
         <div>
-          <h3 className="font-display text-xl text-ink-900">Origin Web</h3>
+          <h3 className="font-display text-xl text-ink-100">Origin Web</h3>
           <p className="text-xs font-medium text-earth-400 uppercase tracking-widest">Pillar 1: Corroboration</p>
         </div>
       </div>
 
       <div className="mb-8">
         <div className="flex justify-between items-end mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-ink-800 uppercase tracking-tight">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-ink-200 uppercase tracking-tight">
             <Users className="w-3.5 h-3.5" /> Progress
           </div>
           <span className="text-2xl font-display text-earth-600 leading-none">{progressPct}%</span>
@@ -73,7 +73,7 @@ export default function OriginCorroborate({
           />
         </div>
         <p className="text-xs text-earth-500 mt-3 leading-relaxed">
-          You need <span className="font-bold text-ink-900 underline decoration-earth-300">3 Level 2+ members</span> from {originCountry} to corroborate your origin.
+          You need <span className="font-bold text-ink-100 underline decoration-earth-300">3 Level 2+ members</span> from {originCountry} to corroborate your origin.
           Share your ID below with them so they can submit it from their own profile.
         </p>
       </div>
@@ -89,14 +89,14 @@ export default function OriginCorroborate({
           </div>
         )}
 
-        <div className="p-5 rounded-2xl bg-earth-50/50 border border-earth-100">
+        <div className="surface-subtle p-5 rounded-2xl">
           <label className="block text-[11px] font-bold text-earth-500 uppercase tracking-widest mb-3">Corroborate Another Member</label>
           <p className="text-xs text-earth-500 mb-3 leading-relaxed">
             Enter the ID of another member from {originCountry} only if they asked you to vouch for their origin.
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
-              className="flex-1 bg-white border border-earth-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-earth-500 outline-none transition-all"
+              className="input flex-1"
               placeholder="Enter another member's ID..."
               value={memberId2}
               onChange={e => setMemberId2(e.target.value)}
@@ -105,7 +105,7 @@ export default function OriginCorroborate({
             <button
               onClick={handleCorroborate}
               disabled={!memberId2.trim() || loading}
-              className="bg-earth-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-earth-700 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="btn-primary px-6 py-3 text-sm active:scale-95 disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
             </button>
@@ -119,17 +119,17 @@ export default function OriginCorroborate({
 
         <div className="relative group">
           <div className="absolute inset-0 bg-earth-100 rounded-2xl transform rotate-1 transition-transform group-hover:rotate-0" />
-          <div className="relative bg-white border border-earth-200 p-4 rounded-2xl flex items-center justify-between">
+          <div className="relative surface-subtle p-4 rounded-2xl flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold text-earth-400 uppercase">Share This ID With Corroborators</p>
-              <p className="text-sm font-mono font-medium text-ink-900">{memberId}</p>
+              <p className="text-sm font-mono font-medium text-ink-100">{memberId}</p>
               <p className="text-xs text-earth-500 mt-1">
                 Members from {originCountry} can enter this ID on their profile to support your Origin Web pillar.
               </p>
             </div>
             <button
               onClick={copyId}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${copied ? 'bg-forest-500 text-white' : 'bg-earth-50 text-earth-600 hover:bg-earth-100'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${copied ? 'bg-forest-500 text-white' : 'surface-chip text-earth-300 hover:bg-earth-100'}`}
             >
               {copied ? 'Copied!' : 'Copy ID'}
             </button>

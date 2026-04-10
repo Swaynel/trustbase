@@ -41,11 +41,11 @@ export default function CreateProposalModal() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+          <div className="surface-modal w-full max-w-md fade-in">
             <div className="flex items-center justify-between p-6 border-b border-earth-100">
               <div className="flex items-center gap-2">
                 <Vote className="w-5 h-5 text-earth-500" />
-                <h2 className="font-display text-xl text-ink-900">New proposal</h2>
+                <h2 className="font-display text-xl text-ink-100">New proposal</h2>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-earth-50 rounded-lg">
                 <X className="w-4 h-4 text-earth-500" />
@@ -54,9 +54,7 @@ export default function CreateProposalModal() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">
-                  Proposal text
-                </label>
+                <label className="field-label">Proposal text</label>
                 <textarea
                   className="input resize-none h-28"
                   placeholder="e.g. Increase maximum chama size from 30 to 50 members"
@@ -65,7 +63,7 @@ export default function CreateProposalModal() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-earth-600 mb-1.5">Voting window</label>
+                <label className="field-label">Voting window</label>
                 <select className="input" value={form.windowDays}
                   onChange={e => setForm(f => ({ ...f, windowDays: e.target.value }))}>
                   <option value="1">1 day</option>

@@ -66,7 +66,7 @@ export default async function LoansPage() {
         </div>
         <div className="card text-center py-16">
           <Lock className="w-12 h-12 text-earth-300 mx-auto mb-3" />
-          <h2 className="font-display text-xl text-ink-900 mb-2">Level 2 required</h2>
+          <h2 className="font-display text-xl text-ink-100 mb-2">Level 2 required</h2>
           <p className="text-sm text-earth-500">Complete 2 identity pillars to access loans.</p>
         </div>
       </div>
@@ -170,8 +170,8 @@ export default async function LoansPage() {
 
       {/* How it works */}
       <div className="card bg-earth-50 border-earth-200">
-        <h3 className="font-medium text-ink-900 text-sm mb-3">How peer-guarantee loans work</h3>
-        <div className="grid md:grid-cols-3 gap-3 text-xs text-earth-600">
+        <h3 className="font-medium text-ink-100 text-sm mb-3">How peer-guarantee loans work</h3>
+        <div className="grid md:grid-cols-3 gap-3 text-xs text-earth-400">
           <div className="flex gap-2"><span className="font-mono text-earth-400">01</span> Request a loan from your chama pool — nominate 2–3 guarantors</div>
           <div className="flex gap-2"><span className="font-mono text-earth-400">02</span> Guarantors stake their reputation score. On acceptance, funds are disbursed</div>
           <div className="flex gap-2"><span className="font-mono text-earth-400">03</span> Repay on time → guarantors earn reputation. Default → reputation deducted</div>
@@ -181,7 +181,7 @@ export default async function LoansPage() {
       {/* Pending guarantee actions */}
       {pendingGuarantees.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900 mb-3">
+          <h2 className="font-display text-lg text-ink-100 mb-3">
             Guarantee requests ({pendingGuarantees.length})
           </h2>
           <div className="space-y-3">
@@ -189,10 +189,10 @@ export default async function LoansPage() {
               <div key={g.id} className="card border-amber-200 bg-amber-50">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-medium text-ink-900">
+                    <p className="font-medium text-ink-100">
                       {g.loans?.members?.display_name || 'Member'} needs a guarantee
                     </p>
-                    <p className="text-sm text-earth-600 mt-0.5">
+                    <p className="text-sm text-earth-400 mt-0.5">
                       KES {g.loans?.amount?.toLocaleString()} — {g.loans?.purpose || 'No purpose given'}
                     </p>
                   </div>
@@ -207,7 +207,7 @@ export default async function LoansPage() {
 
       {/* My loans */}
       <section>
-        <h2 className="font-display text-lg text-ink-900 mb-3">My loans</h2>
+        <h2 className="font-display text-lg text-ink-100 mb-3">My loans</h2>
         {!myLoans.length ? (
           <div className="card text-center py-10">
             <Landmark className="w-10 h-10 text-earth-300 mx-auto mb-2" />
@@ -228,12 +228,12 @@ export default async function LoansPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <Landmark className="w-4 h-4 text-earth-500" />
-                        <p className="font-medium text-ink-900">KES {loan.amount.toLocaleString()}</p>
+                        <p className="font-medium text-ink-100">KES {loan.amount.toLocaleString()}</p>
                         <span className={`badge ${s.color} flex items-center gap-1`}>
                           {s.icon}{s.label}
                         </span>
                       </div>
-                      {loan.purpose && <p className="text-sm text-earth-600">{loan.purpose}</p>}
+                      {loan.purpose && <p className="text-sm text-earth-400">{loan.purpose}</p>}
                       {loan.chamas?.name && <p className="text-xs text-earth-400 mt-0.5">From: {loan.chamas.name}</p>}
                     </div>
                     {daysLeft !== null && loan.status === 'disbursed' && (

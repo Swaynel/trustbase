@@ -61,11 +61,11 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+          <div className="surface-modal w-full max-w-md fade-in">
             <div className="flex items-center justify-between p-5 border-b border-earth-100">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500" />
-                <h2 className="font-display text-xl text-ink-900">Raise a dispute</h2>
+                <h2 className="font-display text-xl text-ink-100">Raise a dispute</h2>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-earth-50 rounded-lg">
                 <X className="w-4 h-4 text-earth-500" />
@@ -75,7 +75,7 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
             <div className="p-5 space-y-4">
               {!result ? (
                 <>
-                  <p className="text-sm text-earth-600">
+                  <p className="text-sm text-earth-400">
                     Describe what went wrong. Our AI assistant will analyse the dispute and a
                     human moderator will make the final decision.
                   </p>
@@ -100,9 +100,9 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
                 </>
               ) : (
                 <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-earth-50">
+                  <div className="p-3 rounded-xl surface-subtle">
                     <p className="text-xs font-medium text-earth-600 mb-1">AI Summary</p>
-                    <p className="text-sm text-ink-800">{result.aiRecommendation?.summary || result.message || 'Dispute logged.'}</p>
+                    <p className="text-sm text-ink-100">{result.aiRecommendation?.summary || result.message || 'Dispute logged.'}</p>
                   </div>
                   {result.aiRecommendation?.recommendation && (
                     <div className={`p-3 rounded-xl text-sm font-medium ${RECOMMENDATION_LABELS[result.aiRecommendation.recommendation]?.color || 'text-earth-700 bg-earth-50'}`}>

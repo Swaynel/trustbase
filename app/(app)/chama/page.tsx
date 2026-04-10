@@ -105,7 +105,7 @@ export default async function ChamaPage() {
         </div>
         <div className="card text-center py-16">
           <Lock className="w-12 h-12 text-earth-300 mx-auto mb-3" />
-          <h2 className="font-display text-xl text-ink-900 mb-2">Level 1 required</h2>
+          <h2 className="font-display text-xl text-ink-100 mb-2">Level 1 required</h2>
           <p className="text-sm text-earth-500">Complete one identity pillar to join savings groups.</p>
           <Link href="/dashboard" className="btn-primary inline-flex mt-4">Go to Dashboard</Link>
         </div>
@@ -128,7 +128,7 @@ export default async function ChamaPage() {
       {/* My groups */}
       {chamas.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900 mb-3">My groups ({chamas.length})</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-3">My groups ({chamas.length})</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {chamas.map((c) => (
               <Link key={c.id} href={`/chama/${c.id}`}>
@@ -136,16 +136,16 @@ export default async function ChamaPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 rounded-xl bg-earth-100 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-earth-600" />
+                        <Users className="w-4 h-4 text-earth-300" />
                       </div>
                       <div>
-                        <p className="font-medium text-ink-900">{c.name}</p>
+                        <p className="font-medium text-ink-100">{c.name}</p>
                         <span className={`badge text-xs ${STATUS_COLORS[c.status]}`}>{c.status}</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-earth-400">Pool balance</p>
-                      <p className="font-display text-lg text-ink-900">KES {c.balance.toLocaleString()}</p>
+                      <p className="font-display text-lg text-ink-100">KES {c.balance.toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-earth-500 pt-3 border-t border-earth-100">
@@ -165,7 +165,7 @@ export default async function ChamaPage() {
       {/* Discover */}
       {openChamas && openChamas.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900 mb-3">Open groups to join</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-3">Open groups to join</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {openChamas.map((c) => (
               <Link key={c.id} href={`/chama/${c.id}`}>
@@ -175,7 +175,7 @@ export default async function ChamaPage() {
                       <Users className="w-4 h-4 text-amber-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-ink-900">{c.name}</p>
+                      <p className="font-medium text-ink-100">{c.name}</p>
                       <p className="text-xs text-earth-500">KES {c.contribution_amount} / cycle</p>
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export default async function ChamaPage() {
       {chamas.length === 0 && (!openChamas || openChamas.length === 0) && (
         <div className="card text-center py-16">
           <Users className="w-12 h-12 text-earth-300 mx-auto mb-3" />
-          <h2 className="font-display text-xl text-ink-900 mb-2">No groups yet</h2>
+          <h2 className="font-display text-xl text-ink-100 mb-2">No groups yet</h2>
           <p className="text-sm text-earth-500 mb-4">Reach Level 3 to create your own chama, or ask a Level 3 member to invite you.</p>
         </div>
       )}

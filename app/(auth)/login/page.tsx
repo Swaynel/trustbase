@@ -189,7 +189,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-sand-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-sand-50 px-4 text-ink-100">
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-30 bg-grain pointer-events-none" />
 
@@ -205,16 +205,16 @@ export default function LoginPage() {
               <line x1="16" y1="15" x2="24" y2="18" stroke="white" strokeWidth="1.5" opacity="0.5"/>
             </svg>
           </div>
-          <h1 className="font-display text-3xl font-bold text-ink-900">TrustBase</h1>
-          <p className="text-earth-600 text-sm mt-1">Community Financial Network</p>
+          <h1 className="font-display text-3xl font-bold text-ink-100">TrustBase</h1>
+          <p className="text-earth-400 text-sm mt-1">Community Financial Network</p>
         </div>
 
         <div className="card p-8 animate-fade-up-delay-1">
           {step === 'phone' && (
             <>
-              <h2 className="font-display text-xl font-semibold text-ink-900 mb-1">Welcome</h2>
-              <p className="text-earth-600 text-sm mb-6">Enter your phone number to get started</p>
-              <label className="block text-sm font-medium text-ink-800 mb-1.5">Phone number</label>
+              <h2 className="font-display text-xl font-semibold text-ink-100 mb-1">Welcome</h2>
+              <p className="text-earth-400 text-sm mb-6">Enter your phone number to get started</p>
+              <label className="field-label">Phone number</label>
               <input
                 className="input mb-4"
                 type="tel"
@@ -232,9 +232,9 @@ export default function LoginPage() {
 
           {step === 'otp' && (
             <>
-              <h2 className="font-display text-xl font-semibold text-ink-900 mb-1">Verify</h2>
-              <p className="text-earth-600 text-sm mb-6">Enter the 6-digit code sent to {phone}</p>
-              <label className="block text-sm font-medium text-ink-800 mb-1.5">Verification code</label>
+              <h2 className="font-display text-xl font-semibold text-ink-100 mb-1">Verify</h2>
+              <p className="text-earth-400 text-sm mb-6">Enter the 6-digit code sent to {phone}</p>
+              <label className="field-label">Verification code</label>
               <input
                 className="input mb-4 text-center text-2xl font-mono tracking-widest"
                 type="text"
@@ -255,18 +255,18 @@ export default function LoginPage() {
 
           {step === 'profile' && (
             <>
-              <h2 className="font-display text-xl font-semibold text-ink-900 mb-1">Create profile</h2>
-              <p className="text-earth-600 text-sm mb-6">Tell us a bit about yourself</p>
+              <h2 className="font-display text-xl font-semibold text-ink-100 mb-1">Create profile</h2>
+              <p className="text-earth-400 text-sm mb-6">Tell us a bit about yourself</p>
 
-              <label className="block text-sm font-medium text-ink-800 mb-1.5">Your name</label>
+              <label className="field-label">Your name</label>
               <input className="input mb-4" type="text" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} />
 
-              <label className="block text-sm font-medium text-ink-800 mb-1.5">Preferred language</label>
+              <label className="field-label">Preferred language</label>
               <select className="input mb-4" value={lang} onChange={e => setLang(e.target.value)}>
                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
               </select>
 
-              <label className="block text-sm font-medium text-ink-800 mb-1.5">Country of origin</label>
+              <label className="field-label">Country of origin</label>
               <input className="input mb-6" type="text" placeholder="e.g. Democratic Republic of Congo" value={country} onChange={e => setCountry(e.target.value)} />
 
               {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
@@ -277,7 +277,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-earth-500 mt-6 animate-fade-up-delay-2">
+        <p className="text-center text-xs text-earth-400 mt-6 animate-fade-up-delay-2">
           Your community vouches for you. Your history funds you.
         </p>
       </div>

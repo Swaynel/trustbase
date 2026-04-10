@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { ShoppingBag, ShoppingCart, Loader2 } from 'lucide-react'
-import { getListingUrl } from '@/lib/cloudinary'
 
 interface Listing {
   id: string
@@ -12,6 +11,7 @@ interface Listing {
   category: string
   price: number
   cloudinary_public_id?: string | null
+  image_url?: string | null
   seller_id: string
   created_at: string
   members?: { display_name: string } | null
@@ -104,7 +104,7 @@ function ListingCard({ listing: l, isOwner }: { listing: Listing; isOwner: boole
     }
   }
 
-  const imgUrl = l.cloudinary_public_id ? getListingUrl(l.cloudinary_public_id) : null
+  const imgUrl = l.image_url || null
 
   return (
     <div className="card p-0 overflow-hidden hover:shadow-md transition-shadow">
@@ -115,14 +115,14 @@ function ListingCard({ listing: l, isOwner }: { listing: Listing; isOwner: boole
         ) : (
           <span className="text-4xl">{CATEGORY_EMOJI[l.category] || '📦'}</span>
         )}
-        <span className="absolute top-2 left-2 badge bg-white/90 text-earth-700 text-xs shadow-sm">
+        <span className="absolute top-2 left-2 badge bg-earth-800 text-earth-300 text-xs shadow-sm">
           {l.category}
         </span>
       </div>
 
       {/* Content */}
       <div className="p-3">
-        <p className="font-medium text-ink-900 text-sm truncate mb-0.5">{l.title}</p>
+        <p className="font-medium text-ink-100 text-sm truncate mb-0.5">{l.title}</p>
         <p className="text-xs text-earth-400 line-clamp-2 mb-2">{l.description}</p>
         <div className="flex items-center justify-between">
           <p className="font-display text-base text-earth-600">KES {l.price.toLocaleString()}</p>

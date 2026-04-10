@@ -92,10 +92,10 @@ export default async function GovernancePage() {
               Governance weight
             </p>
             <div className="flex items-start gap-1">
-              <p className="font-display text-5xl leading-none text-ink-900">{WEIGHT}</p>
+              <p className="font-display text-5xl leading-none text-ink-100">{WEIGHT}</p>
               <span className="text-xl mt-1 text-earth-400">×</span>
             </div>
-            <p className="text-sm font-medium text-earth-600">
+            <p className="text-sm font-medium text-earth-300">
               {LEVEL_NAMES[member.identity_level]}
             </p>
           </div>
@@ -113,7 +113,7 @@ export default async function GovernancePage() {
                   <div
                     key={name}
                     className={`flex items-center justify-between text-sm ${
-                      active ? 'font-semibold text-ink-900' : 'text-earth-400'
+                      active ? 'font-semibold text-ink-100' : 'text-earth-400'
                     }`}
                   >
                     <span>{name}</span>
@@ -128,8 +128,8 @@ export default async function GovernancePage() {
 
       {/* How voting works */}
       <div className="card p-5 bg-earth-50/60 border-earth-200">
-        <p className="text-xs font-semibold text-earth-700 mb-2">How community voting works</p>
-        <ul className="text-xs text-earth-600 space-y-1 list-disc list-inside">
+        <p className="text-xs font-semibold text-earth-300 mb-2">How community voting works</p>
+        <ul className="text-xs text-earth-400 space-y-1 list-disc list-inside">
           <li>Level 3+ members can submit proposals for the community to vote on</li>
           <li>Voting weight scales with identity level — anchors carry 3× the weight of participants</li>
           <li>Proposals resolve at the end of the voting window via weighted majority</li>
@@ -140,7 +140,7 @@ export default async function GovernancePage() {
 
       {/* Open votes */}
       <section>
-        <h2 className="font-display text-lg text-ink-900 mb-3">
+        <h2 className="font-display text-lg text-ink-100 mb-3">
           Open votes ({openVotes.length})
         </h2>
 
@@ -161,7 +161,7 @@ export default async function GovernancePage() {
               return (
                 <div key={v.id} className="card p-5">
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <p className="font-medium text-ink-900 flex-1 leading-snug">{v.proposal}</p>
+                    <p className="font-medium text-ink-100 flex-1 leading-snug">{v.proposal}</p>
                     <span className="badge bg-amber-100 text-amber-700 flex-shrink-0 flex items-center gap-1 text-xs">
                       <Clock className="w-3 h-3" />
                       {closesIn}d left
@@ -207,7 +207,7 @@ export default async function GovernancePage() {
       {/* Past votes */}
       {closedVotes.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900 mb-3">Past votes</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-3">Past votes</h2>
           <div className="card divide-y divide-earth-100">
             {closedVotes.map((v) => (
               <div key={v.id} className="flex items-center gap-3 px-5 py-3">
@@ -215,7 +215,7 @@ export default async function GovernancePage() {
                   ? <CheckCircle2 className="w-4 h-4 text-forest-500 flex-shrink-0" />
                   : <XCircle     className="w-4 h-4 text-red-400 flex-shrink-0" />
                 }
-                <p className="flex-1 text-sm text-ink-800 truncate">{v.proposal}</p>
+                <p className="flex-1 text-sm text-ink-100 truncate">{v.proposal}</p>
                 <span className={`badge text-xs flex-shrink-0 ${
                   v.result === 'passed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
@@ -230,12 +230,12 @@ export default async function GovernancePage() {
       {/* Community rules */}
       {rules.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900 mb-3">Community rules</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-3">Community rules</h2>
           <div className="card divide-y divide-earth-100">
             {rules.map((r) => (
               <div key={r.key} className="flex items-center justify-between px-5 py-3">
                 <p className="text-sm text-earth-500 font-mono">{r.key.replace(/_/g, ' ')}</p>
-                <p className="text-sm font-medium text-ink-900">{r.value}</p>
+                <p className="text-sm font-medium text-ink-100">{r.value}</p>
               </div>
             ))}
           </div>

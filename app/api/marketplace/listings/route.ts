@@ -1,6 +1,7 @@
 // app/api/marketplace/listings/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { classifyListing, embed } from '@/lib/cohere'
+import { getListingUrl } from '@/lib/cloudinary'
 import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
       listing: {
         ...listing,
         price: decimalToNumber(listing.price),
+        image_url: listing.cloudinary_public_id ? getListingUrl(listing.cloudinary_public_id) : null,
         quality_score: listing.quality_score == null ? null : decimalToNumber(listing.quality_score),
         created_at: listing.created_at.toISOString(),
       },
@@ -164,6 +166,7 @@ export async function GET(req: NextRequest) {
     listings: listings.map((listing: ListingRow) => ({
       ...listing,
       price: decimalToNumber(listing.price),
+      image_url: listing.cloudinary_public_id ? getListingUrl(listing.cloudinary_public_id) : null,
       quality_score: listing.quality_score == null ? null : decimalToNumber(listing.quality_score),
       created_at: listing.created_at.toISOString(),
       members: sellerMap.get(listing.seller_id)

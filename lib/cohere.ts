@@ -61,19 +61,100 @@ export async function embedQuery(query: string): Promise<number[]> {
   return data.embeddings.float[0] as number[]
 }
 
-// ─── CLASSIFY ────────────────────────────────────────────────────────────────
-export async function classify(inputs: string[], examples: Array<{ text: string; label: string }>) {
-  const data = await cohereFetch('/classify', {
-    model: 'embed-multilingual-v3.0',
-    inputs,
-    examples,
-  })
-  return data.classifications as Array<{
-    input: string
-    prediction: string
-    confidence: number
-    confidences: Array<{ option: string; confidence: number }>
-  }>
+// ─── CLASSIFY (chat-based replacement) ───────────────────────────────────────
+type ClassificationExample = { text: string; label: string }
+
+type ClassificationResult = {
+  input: string
+  prediction: string
+  confidence: number
+  confidences: Array<{ option: string; confidence: number }>
+}
+
+function normalizeConfidence(value: unknown) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0.5
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
+function buildFallbackConfidences(labels: string[], prediction: string, confidence: number) {
+  const remainder = labels.length > 1 ? (1 - confidence) / (labels.length - 1) : 0
+
+  return labels.map((label) => ({
+    option: label,
+    confidence: label === prediction ? confidence : remainder,
+  }))
+}
+
+export async function classify(inputs: string[], examples: ClassificationExample[]) {
+  const labels = Array.from(new Set(examples.map((example) => example.label)))
+  const examplesText = examples
+    .map((example) => `Label: ${example.label}\nText: ${example.text}`)
+    .join('\n\n')
+
+  const systemPrompt = `You are a compact text classifier.
+Return only valid JSON with this shape:
+{"results":[{"prediction":"one label","confidence":0.0,"confidences":[{"option":"label","confidence":0.0}]}]}
+
+Rules:
+- Use only these labels: ${labels.join(', ')}
+- Confidence must be between 0 and 1
+- Include one confidences entry per label
+- No markdown, no commentary.`
+
+  const results = await Promise.all(
+    inputs.map(async (input) => {
+      const response = await chat({
+        model: DEFAULT_CHAT_MODEL,
+        systemPrompt,
+        message: `Examples:\n${examplesText}\n\nClassify this text:\n${input}`,
+      })
+
+      try {
+        const parsed = JSON.parse(response.replace(/```json|```/g, '').trim()) as {
+          results?: Array<{
+            prediction?: string
+            confidence?: number
+            confidences?: Array<{ option?: string; confidence?: number }>
+          }>
+        }
+
+        const candidate = parsed.results?.[0]
+        const prediction = labels.includes(candidate?.prediction || '') ? String(candidate?.prediction) : labels[0]
+        const confidence = normalizeConfidence(candidate?.confidence)
+        const confidences =
+          candidate?.confidences
+            ?.map((item) => ({
+              option: typeof item.option === 'string' ? item.option : '',
+              confidence: normalizeConfidence(item.confidence),
+            }))
+            .filter((item) => labels.includes(item.option))
+            ?? []
+
+        return {
+          input,
+          prediction,
+          confidence,
+          confidences: confidences.length
+            ? confidences
+            : buildFallbackConfidences(labels, prediction, confidence),
+        } satisfies ClassificationResult
+      } catch {
+        const prediction = labels[0]
+        const confidence = 0.5
+
+        return {
+          input,
+          prediction,
+          confidence,
+          confidences: buildFallbackConfidences(labels, prediction, confidence),
+        } satisfies ClassificationResult
+      }
+    })
+  )
+
+  return results
 }
 
 // ─── IDENTITY EXPLAINER ──────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { decimalToNumber } from '@/lib/prisma-utils'
 import { getCurrentUserWithMember } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
 import { Users, CheckCircle2 } from 'lucide-react'
 import ContributeButton from '@/components/chama/ContributeButton'
 import RequestLoanButton from '@/components/loans/RequestLoanButton'
@@ -149,10 +150,10 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-earth-100 flex items-center justify-center">
-              <Users className="w-6 h-6 text-earth-600" />
+              <Users className="w-6 h-6 text-earth-300" />
             </div>
             <div>
-              <h1 className="font-display text-2xl text-ink-900">{chama.name}</h1>
+              <h1 className="font-display text-2xl text-ink-100">{chama.name}</h1>
               <span className={`badge ${STATUS_COLORS[chama.status]}`}>{chama.status}</span>
             </div>
           </div>
@@ -163,21 +164,21 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
         </div>
 
         {chama.description && (
-          <p className="text-sm text-earth-600 mb-4">{chama.description}</p>
+          <p className="text-sm text-earth-400 mb-4">{chama.description}</p>
         )}
 
         <div className="grid grid-cols-3 gap-3 text-center py-3 border-y border-earth-100 mb-4">
           <div>
             <p className="text-xs text-earth-400">Contribution</p>
-            <p className="font-medium text-ink-900">KES {decimalToNumber(chama.contribution_amount)}</p>
+            <p className="font-medium text-ink-100">KES {decimalToNumber(chama.contribution_amount)}</p>
           </div>
           <div>
             <p className="text-xs text-earth-400">Cycle</p>
-            <p className="font-medium text-ink-900">{chama.cycle_days} days</p>
+            <p className="font-medium text-ink-100">{chama.cycle_days} days</p>
           </div>
           <div>
             <p className="text-xs text-earth-400">Members</p>
-            <p className="font-medium text-ink-900">{chamaMemberList.length}</p>
+            <p className="font-medium text-ink-100">{chamaMemberList.length}</p>
           </div>
         </div>
 
@@ -199,7 +200,7 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
           <div className="flex items-center justify-between bg-earth-50 rounded-xl p-3 mb-4">
             <div>
               <p className="text-xs text-earth-400">My total contributed</p>
-              <p className="font-medium text-ink-900">KES {decimalToNumber(membership.total_contributed).toLocaleString()}</p>
+              <p className="font-medium text-ink-100">KES {decimalToNumber(membership.total_contributed).toLocaleString()}</p>
             </div>
             {membership.payout_received && (
               <span className="badge bg-green-100 text-green-700">
@@ -222,22 +223,26 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
 
       {/* Members */}
       <div className="card">
-        <h2 className="font-display text-lg text-ink-900 mb-4">Members ({chamaMemberList.length})</h2>
+        <h2 className="font-display text-lg text-ink-100 mb-4">Members ({chamaMemberList.length})</h2>
         <div className="space-y-2">
           {chamaMemberList.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
+            <Link
+              key={m.id}
+              href={m.id === member.id ? '/profile' : `/profile/${m.id}`}
+              className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-earth-50"
+            >
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-earth-200 flex items-center justify-center text-xs font-medium text-earth-700">
                 {(m.display_name || '?').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-ink-800">{m.display_name || 'Anonymous'}</p>
+                <p className="text-sm font-medium text-ink-100">{m.display_name || 'Anonymous'}</p>
                 <p className="text-xs text-earth-400">Level {m.identity_level}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-earth-500">KES {m.total_contributed.toLocaleString()}</p>
                 {m.payout_received && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-auto" />}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -245,13 +250,13 @@ export default async function ChamaDetailPage({ params }: ChamaDetailPageProps) 
       {/* Recent contributions */}
       {contributions && contributions.length > 0 && (
         <div className="card">
-          <h2 className="font-display text-lg text-ink-900 mb-4">Recent contributions</h2>
+          <h2 className="font-display text-lg text-ink-100 mb-4">Recent contributions</h2>
           <div className="space-y-2">
             {contributions.map((c) => (
               <div key={c.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-earth-50">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.status === 'success' ? 'bg-green-400' : c.status === 'pending' ? 'bg-amber-400' : 'bg-red-400'}`} />
                 <div className="flex-1">
-                  <p className="text-sm text-ink-800">{c.members?.display_name || 'Member'}</p>
+                  <p className="text-sm text-ink-100">{c.members?.display_name || 'Member'}</p>
                   <p className="text-xs text-earth-400">{new Date(c.created_at).toLocaleDateString()}</p>
                 </div>
                 <span className="text-sm font-medium text-earth-700">KES {c.amount.toLocaleString()}</span>

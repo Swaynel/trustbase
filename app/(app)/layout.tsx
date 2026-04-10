@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-[100dvh] bg-sand-50 text-ink-900 selection:bg-earth-200 selection:text-ink-900">
+    <div className="flex min-h-[100dvh] bg-sand-50 text-ink-100 selection:bg-primary-600/60 selection:text-ink-50">
 
       <AppNav
         member={member}
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* Subtle depth gradient behind content header area */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-earth-100/25 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-primary-500/12 to-transparent"
         />
 
         {/* Scrollable region */}
